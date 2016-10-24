@@ -13,12 +13,13 @@ import json
 import itertools
 import sys
 
-# g = igraph.read('test/tcp.gml', 'gml')
-# igraph.plot( g )
 def main( argv ):
+    """main program entry point"""
+
     f = open( argv[0], 'r')
     j_ifas = json.load(f)
     g = ifaProd( j_ifas )
+
     igraph.plot( g )
 
 def json2igraph( j_ifa ):
@@ -28,19 +29,21 @@ def json2igraph( j_ifa ):
     idx = 0
     idx_src = 0
     idx_path_end = 0
+    # iterate through the graph labels
     for port_idx, port in enumerate( j_ifa['ports'] ):
         # prepare strings
         mode = port[-1:]
         port_str = port[0:-1]
+
+        # generate all possible paths by permutation
         paths = itertools.permutations( port_str.split("&") )
-        # print "ports: " + str( port_idx ) + ", " + str( len( j_ifa['ports'] ) )
 
         # remember where the path begins
         idx_path_start = idx_src
+        # iterate through all paths
         for path_idx, path in enumerate( paths ):
-            # print "paths: " + str( path_idx )
+            # iterate through all actions along a path
             for act_idx, act in enumerate( path ):
-                # print "action: " + str( act_idx ) + ", " + str( len( path ) )
                 if act_idx is 0:
                     # first element in new path
                     idx_src = idx_path_start
@@ -53,7 +56,8 @@ def json2igraph( j_ifa ):
                 elif( ( len( path ) == 1 )
                         or ( act_idx < len( path ) - 1 )
                         or ( path_idx is 0 ) ):
-                    # path has only one element, we are in the middle of a path
+                    # path has only one element
+                    # or we are in the middle of a path
                     # or we are doing the first path
                     g_ifa.add_vertex()
                     idx = idx + 1
@@ -71,6 +75,8 @@ def json2igraph( j_ifa ):
     return g_ifa
 
 def isActionShared( edge1, edge2 ):
+    """check whether the two edges are shared actions"""
+
     attr1 = edge1.attributes()
     attr2 = edge2.attributes()
     if( attr1['name'] == attr2['name'] ):
@@ -84,6 +90,8 @@ def isActionShared( edge1, edge2 ):
         return False
 
 def addActShared( g, act1, act2, mod ):
+    """add shared action to the new graph"""
+
     attr = act1.attributes()
     name = attr['name']
     label = name + ';'
@@ -92,8 +100,9 @@ def addActShared( g, act1, act2, mod ):
     g.add_edge( src, dst, label=label, name=name, mode=';' )
 
 def ifaProd( j_ifas ):
-    g_prod = None
+    """create the product of a list of ifas"""
 
+    g_prod = None
     for j_ifa in j_ifas:
         # init
         if g_prod is None:
@@ -102,10 +111,7 @@ def ifaProd( j_ifas ):
 
         g_ifa = json2igraph( j_ifa )
         g_new = igraph.Graph( g_ifa.vcount() * g_prod.vcount(), None, True )
-        # layout = g_new.layout( "kk" )
         g_new.vs[0]['color'] = "blue"
-        # igraph.plot( g_prod )
-        # igraph.plot( g_ifa )
 
         # find shared actions
         del1 = []
@@ -121,23 +127,20 @@ def ifaProd( j_ifas ):
         g_prod.delete_edges( del1 )
         g_ifa.delete_edges( del2 )
 
-        # find independant actions
-        # mod = g_ifa.vcount()
+        # find independant actions in g_prod
         for act in g_prod.es:
             attr = act.attributes()
             for idx in range( 0, g_ifa.vcount() ):
                 src = mod * act.source + idx
                 dst = mod * act.target + idx
-                # print [ mod, [act.source, idx],[act.target, idx], src, dst]
                 g_new.add_edge( src, dst, label=attr['label'], name=attr['name'], mode=attr['mode'] )
 
-        # mod = g_prod.vcount()
+        # find independant actions in g_ifa
         for act in g_ifa.es:
             attr = act.attributes()
             for idx in range( 0, g_prod.vcount() ):
                 src = mod * idx + act.source
                 dst = mod * idx + act.target
-                # print [ mod, [idx, act.source],[idx, act.target], src, dst]
                 g_new.add_edge( src, dst, label=attr['label'], name=attr['name'], mode=attr['mode'] )
 
         # remove unreachable states
@@ -147,10 +150,6 @@ def ifaProd( j_ifas ):
                 continue
             if g_new.adhesion(0, state.index) == 0:
                 vs_del.append( state.index )
-
-        # for state in g_new.vs:
-        #     if state.degree() < 2:
-        #         vs_del.append( state.index )
 
         g_new.delete_vertices( vs_del )
         g_prod = g_new
