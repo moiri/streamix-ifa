@@ -8,70 +8,88 @@ __maintainer__ = "Simon Maurer"
 __email__ = "s.maurer@herts.ac.uk"
 __status__ = "Prototype"
 
-import igraph
-import json
-import itertools
-import sys
+import igraph, json, itertools, math
+import sys, argparse
 
-def main( argv ):
+parser = argparse.ArgumentParser()
+parser.add_argument( '-u', '--show-unreachable', action='store_true', help='show unreachable states' )
+parser.add_argument( '-r', '--remove-error', action='store_true', help='remove error states' )
+parser.add_argument( '-s', '--step', action='store_true', help='show all intermediate interface automata' )
+parser.add_argument( 'infile' )
+args = parser.parse_args()
+
+def main():
     """main program entry point"""
 
-    f = open( argv[0], 'r')
-    j_ifas = json.load(f)
+    f = open( args.infile, 'r' )
+
+    j_ifas = json.load( f )
     g = ifaProd( j_ifas )
 
+    # igraph.plot( g, layout = g.layout_mds() )
     igraph.plot( g )
 
 def json2igraph( j_ifa ):
     """generate interface automata graph out of json description"""
 
-    g_ifa = igraph.Graph( 1, None, True )
+    g_ifa = igraph.Graph( len( j_ifa['ports'] ), None, True )
     idx = 0
     idx_src = 0
     idx_path_end = 0
+    port_last = False
     # iterate through the graph labels
     for port_idx, port in enumerate( j_ifa['ports'] ):
+        if port_idx + 1 == len( j_ifa['ports'] ):
+            port_last = True
+
         # prepare strings
         mode = port[-1:]
         port_str = port[0:-1]
 
         # generate all possible paths by permutation
-        paths = itertools.permutations( port_str.split("&") )
+        acts = port_str.split("&")
+        paths = itertools.permutations( acts )
+
+        # add x!*(x-1) vertices
+        vs_add = math.factorial( len( acts ) ) * ( len( acts ) - 1 )
+        if vs_add is not 0:
+            g_ifa.add_vertices( vs_add )
 
         # remember where the path begins
         idx_path_start = idx_src
         # iterate through all paths
         for path_idx, path in enumerate( paths ):
             # iterate through all actions along a path
+            act_last = False
             for act_idx, act in enumerate( path ):
+                if act_idx + 1 == len( path ):
+                    act_last = True
+
+                # set source index
                 if act_idx is 0:
-                    # first element in new path
                     idx_src = idx_path_start
                 else:
                     idx_src = idx
-                if( ( port_idx >= len( j_ifa['ports'] ) - 1 )
-                        and ( act_idx >= len( path ) - 1 ) ):
-                    # last port and last action
+
+                # set target index
+                if port_last and act_last:
                     idx_dst = 0
-                elif( ( len( path ) == 1 )
-                        or ( act_idx < len( path ) - 1 )
-                        or ( path_idx is 0 ) ):
-                    # path has only one element
-                    # or we are in the middle of a path
-                    # or we are doing the first path
-                    g_ifa.add_vertex()
+                elif( ( len( path ) == 1 ) or not act_last or path_idx is 0 ):
                     idx = idx + 1
                     idx_dst = idx
                 else:
                     # last action of a path
                     idx_dst = idx_path_end
-                g_ifa.add_edge( idx_src, idx_dst, label=act + mode, name=act, mode=mode )
+
+                label = act + mode
+                g_ifa.add_edge( idx_src, idx_dst, label=label, name=act, mode=mode )
 
             #remember where the path ended
             if path_idx is 0:
                 idx_path_end = idx_dst
             idx_src = idx_dst
 
+    g_ifa.vs[0]['color'] = "blue"
     return g_ifa
 
 def isActionShared( edge1, edge2 ):
@@ -113,6 +131,10 @@ def ifaProd( j_ifas ):
         g_new = igraph.Graph( g_ifa.vcount() * g_prod.vcount(), None, True )
         g_new.vs[0]['color'] = "blue"
 
+        if args.step:
+            igraph.plot( g_prod )
+            igraph.plot( g_ifa )
+
         # find shared actions
         del1 = []
         del2 = []
@@ -143,19 +165,37 @@ def ifaProd( j_ifas ):
                 dst = mod * idx + act.target
                 g_new.add_edge( src, dst, label=attr['label'], name=attr['name'], mode=attr['mode'] )
 
-        # remove unreachable states
-        vs_del = []
+        # get unreachable states
+        vs_unreachable = []
         for state in g_new.vs:
             if state.index == 0:
                 continue
             if g_new.adhesion(0, state.index) == 0:
-                vs_del.append( state.index )
+                vs_unreachable.append( state.index )
 
-        g_new.delete_vertices( vs_del )
+        if args.show_unreachable:
+            vs_sec = g_new.vs.select( vs_unreachable )
+            vs_sec['color'] = 'white'
+            igraph.plot( g_new )
+
+        g_new.delete_vertices( vs_unreachable )
+
+        # get error states
+        vs_error = []
+        for state in g_new.vs:
+            if state.index == 0:
+                continue
+            if g_new.adhesion( state.index, 0 ) == 0:
+                vs_error.append( state.index )
+
+        vs_sec = g_new.vs.select( vs_error )
+        vs_sec['color'] = 'yellow'
+        if args.remove_error:
+            g_new.delete_vertices( vs_error )
+
         g_prod = g_new
 
-        # igraph.plot( g_new )
     return g_new
 
 if __name__ == "__main__":
-    main( sys.argv[1:] )
+    main()
