@@ -51,7 +51,7 @@ def json2igraphLinear( j_ifa ):
 
 def json2igraphCircular( j_ifa ):
     """generate circular interface automata graph out of json description"""
-    g_ifa = igraph.Graph( len( j_ifa['ports'] ), None, True )
+    g_ifa = ifaCreateGraphCircular( len( j_ifa['ports'] ) )
     idx = 0
     idx_src = 0
     idx_path_end = 0
@@ -170,9 +170,9 @@ def ifaCreateGraphLinear( v_cnt ):
 
 def ifaPlot( g ):
     """plot the graph"""
-    g.vs['color'] = "black"
+    g.vs['color'] = "grey"
     g.vs.select( end=True )['color'] = "green"
-    g.vs.select( init=True )['color'] = "blue"
+    g.vs.select( init=True )['shape'] = "square"
     g.vs.select( error=True )['color'] = "red"
     g.vs.select( reach=False )['color'] = "white"
     g.es['label'] = [ n + m for n, m in zip( g.es['name'], g.es['mode'] ) ]
