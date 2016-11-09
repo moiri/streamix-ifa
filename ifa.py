@@ -12,6 +12,7 @@ import igraph, json, itertools, math
 import sys, argparse
 
 parser = argparse.ArgumentParser()
+parser.add_argument( '-g', '--graph-type', help='set the type of graph (default: circle)' )
 parser.add_argument( '-u', '--show-unreachable', action='store_true', help='show unreachable states' )
 parser.add_argument( '-r', '--remove-error', action='store_true', help='remove error states' )
 parser.add_argument( '-s', '--step', action='store_true', help='show all intermediate interface automata' )
@@ -30,7 +31,31 @@ def main():
     igraph.plot( g )
 
 def json2igraph( j_ifa ):
-    """generate interface automata graph out of json description"""
+    if args.graph_type == 'circle':
+        return json2igraphCircle( j_ifa )
+    elif args.graph_type == 'line':
+        return json2igraphLine( j_ifa )
+    else:
+        return json2igraphCircle( j_ifa )
+
+def json2igraphLine( j_ifa ):
+    """generate linear interface automata graph out of json description"""
+
+    g_ifa = igraph.Graph( len( j_ifa['ports'] ) + 1, None, True )
+    for port_idx, port in enumerate( j_ifa['ports'] ):
+        # prepare strings
+        mode = port[-1:]
+        port_str = port[0:-1]
+        label = port_str + mode
+        g_ifa.add_edge( port_idx, port_idx + 1, label=label, name=port_str, mode=mode )
+
+    v = g_ifa.vs.select( _degree_eq=1 )
+    v['color'] = "green"
+    g_ifa.vs[0]['color'] = "blue"
+    return g_ifa
+
+def json2igraphCircle( j_ifa ):
+    """generate circular interface automata graph out of json description"""
 
     g_ifa = igraph.Graph( len( j_ifa['ports'] ), None, True )
     idx = 0
@@ -107,7 +132,14 @@ def isActionShared( edge1, edge2 ):
     else:
         return False
 
-def addActShared( g, act1, act2, mod ):
+def setColor( v1, v2, g, v ):
+    if ( "green" in v1['color'] ) and ( "green" in v2['color'] ):
+        g.vs( v )['color'] = "green"
+    elif ( ( "green" in v1['color'] ) or ( "green" in v2['color'] ) or
+            ( "yellow" in v1['color'] ) or ( "yellow" in v2['color'] ) ):
+        g.vs( v )['color'] = "yellow"
+
+def addActShared( g1, g2, g, act1, act2, mod ):
     """add shared action to the new graph"""
 
     attr = act1.attributes()
@@ -115,6 +147,9 @@ def addActShared( g, act1, act2, mod ):
     label = name + ';'
     src = mod * act1.source + act2.source
     dst = mod * act1.target + act2.target
+    setColor( g1.vs( act1.source ), g2.vs( act2.source ), g, src )
+    setColor( g1.vs( act1.target ), g2.vs( act2.target ), g, dst )
+
     g.add_edge( src, dst, label=label, name=name, mode=';' )
 
 def ifaProd( j_ifas ):
@@ -142,7 +177,7 @@ def ifaProd( j_ifas ):
         for act1 in g_prod.es:
             for act2 in g_ifa.es:
                 if( isActionShared( act1, act2 ) ):
-                    addActShared( g_new, act1, act2, mod )
+                    addActShared( g_prod, g_ifa, g_new, act1, act2, mod )
                     del1.append( act1.index )
                     del2.append( act2.index )
 
@@ -189,7 +224,7 @@ def ifaProd( j_ifas ):
                 vs_error.append( state.index )
 
         vs_sec = g_new.vs.select( vs_error )
-        vs_sec['color'] = 'yellow'
+        # vs_sec['color'] = 'yellow'
         if args.remove_error:
             g_new.delete_vertices( vs_error )
 
