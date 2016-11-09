@@ -3,7 +3,7 @@
 """Compatibility check of interface automata"""
 
 __author__ = "Simon Maurer"
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 __maintainer__ = "Simon Maurer"
 __email__ = "s.maurer@herts.ac.uk"
 __status__ = "Prototype"
@@ -26,7 +26,6 @@ def main():
     j_ifas = json.load( f )
     g = ifaFold( j_ifas )
 
-    # igraph.plot( g, layout = g.layout_mds() )
     ifaPlot( g )
 
 def json2igraph( j_ifa ):
@@ -46,70 +45,30 @@ def json2igraphLinear( j_ifa ):
         mode = port[-1:]
         name = port[0:-1]
         names = name.split( "&" )
+
+        # generate update the graph
         g_ifa.add_vertices( getTreeVertexCnt( len( names ) ) )
-        createTree( g_ifa, port_idx, port_idx + 1, names, mode )
+        createAmpTree( g_ifa, port_idx, port_idx + 1, names, mode )
 
     return g_ifa
 
 def json2igraphCircular( j_ifa ):
     """generate circular interface automata graph out of json description"""
     g_ifa = ifaCreateGraphCircular( len( j_ifa['ports'] ) )
-    idx = 0
-    idx_src = 0
-    idx_path_end = 0
-    port_last = False
-    # iterate through the graph labels
     for port_idx, port in enumerate( j_ifa['ports'] ):
-        if port_idx + 1 == len( j_ifa['ports'] ):
-            port_last = True
+        port_end = port_idx + 1
+        if port_end == len( j_ifa['ports'] ):
+            port_end = 0
 
         # prepare strings
         mode = port[-1:]
-        port_str = port[0:-1]
+        name = port[0:-1]
+        names = name.split( "&" )
 
-        # generate all possible paths by permutation
-        acts = port_str.split("&")
-        paths = itertools.permutations( acts )
+        # generate update the graph
+        g_ifa.add_vertices( getTreeVertexCnt( len( names ) ) )
+        createAmpTree( g_ifa, port_idx, port_end, names, mode )
 
-        # add x!*(x-1) vertices
-        vs_add = math.factorial( len( acts ) ) * ( len( acts ) - 1 )
-        if vs_add is not 0:
-            g_ifa.add_vertices( vs_add )
-
-        # remember where the path begins
-        idx_path_start = idx_src
-        # iterate through all paths
-        for path_idx, path in enumerate( paths ):
-            # iterate through all actions along a path
-            act_last = False
-            for act_idx, act in enumerate( path ):
-                if act_idx + 1 == len( path ):
-                    act_last = True
-
-                # set source index
-                if act_idx is 0:
-                    idx_src = idx_path_start
-                else:
-                    idx_src = idx
-
-                # set target index
-                if port_last and act_last:
-                    idx_dst = 0
-                elif( ( len( path ) == 1 ) or not act_last or path_idx is 0 ):
-                    idx = idx + 1
-                    idx_dst = idx
-                else:
-                    # last action of a path
-                    idx_dst = idx_path_end
-
-                g_ifa.add_edge( idx_src, idx_dst, name=act, mode=mode )
-
-            #remember where the path ended
-            if path_idx is 0:
-                idx_path_end = idx_dst
-            idx_src = idx_dst
-
-    g_ifa.vs[0]['color'] = "blue"
     return g_ifa
 
 def isActionShared( edge1, edge2 ):
@@ -132,8 +91,8 @@ def addActShared( g1, g2, g, act1, act2, mod ):
 
     g.add_edge( src, dst, name=name, mode=';' )
 
-def createTree( g, start_idx, end_idx, names, mode ):
-    """insert a tree shaped graph between two states"""
+def createAmpTree( g, start_idx, end_idx, names, mode ):
+    """insert a &-tree shaped graph between two states"""
     mod = len( names )
     if mod == 1:
         g.add_edge( start_idx, end_idx, name=names[0], mode=mode )
@@ -146,7 +105,7 @@ def createTree( g, start_idx, end_idx, names, mode ):
             idx_to = idx_to + 1
         g.add_edge( start_idx, idx_to, name=names[idx], mode=mode )
         names_child = [ x for i, x in enumerate( names ) if i is not idx ]
-        idx_to = createTree( g, idx_to, end_idx, names_child , mode )
+        idx_to = createAmpTree( g, idx_to, end_idx, names_child , mode )
 
     return idx_to
 
@@ -155,6 +114,7 @@ def getFoldVertexIdx( mod, q, r ):
     return mod * q + r
 
 def getTreeVertexCnt( depth ):
+    """calculate the number of vertices of a &-tree"""
     v_add = 0
     for fact in range( 2, depth + 1 ):
         v_add = fact * ( v_add + 1 )
@@ -206,6 +166,7 @@ def ifaPlot( g ):
     g.vs.select( init=True )['shape'] = "square"
     g.vs.select( error=True )['color'] = "red"
     g.es['label'] = [ n + m for n, m in zip( g.es['name'], g.es['mode'] ) ]
+    # igraph.plot( g, layout = g.layout_mds() )
     igraph.plot( g )
 
 def ifaFold( j_ifas ):
