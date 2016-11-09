@@ -118,7 +118,7 @@ def isActionShared( edge1, edge2 ):
             return True
         else:
             raise ValueError( edge1['name'] + edge1['mode'] + " and " +
-                    edge2['name'] + attr['mode'] + " are incompatible!" )
+                    edge2['name'] + edge2['mode'] + " are incompatible!" )
     else:
         return False
 
@@ -152,6 +152,10 @@ def ifaCreateGraphFold( g1, g2, mod ):
     for v1 in g1.vs.select( end=True ):
         for v2 in g2.vs.select( end=True ):
             g.vs( getFoldVertexIdx( mod, v1.index, v2.index ) )['end'] = True
+    for v in g1.vs.select( error=True ):
+        g.vs( getFoldVertexIdx( mod, v.index, idx ) for idx in range( g2.vcount() - 1 ) )['error'] = True
+    for v in g2.vs.select( error=True ):
+        g.vs( getFoldVertexIdx( mod, idx, v.index ) for idx in range( g1.vcount() - 1 ) )['error'] = True
     return g
 
 def ifaCreateGraphCircular( v_cnt ):
@@ -171,10 +175,10 @@ def ifaCreateGraphLinear( v_cnt ):
 def ifaPlot( g ):
     """plot the graph"""
     g.vs['color'] = "grey"
+    g.vs.select( reach=False )['color'] = "white"
     g.vs.select( end=True )['color'] = "green"
     g.vs.select( init=True )['shape'] = "square"
     g.vs.select( error=True )['color'] = "red"
-    g.vs.select( reach=False )['color'] = "white"
     g.es['label'] = [ n + m for n, m in zip( g.es['name'], g.es['mode'] ) ]
     igraph.plot( g )
 
@@ -228,13 +232,14 @@ def ifaFold( j_ifas ):
             if g_new.adhesion( g_new_init, state.index ) == 0:
                 state['reach'] = False
 
+        # get error states
+        vs_error = g_new.vs.select( _outdegree_eq=0, end=False )['error'] = True
+
         if args.show_unreachable:
             ifaPlot( g_new )
 
         g_new.delete_vertices( g_new.vs.select( reach=False ) )
 
-        # get error states
-        vs_error = g_new.vs.select( _outdegree_eq=0, end=False )['error'] = True
         if args.remove_error:
             g_new.delete_vertices( vs_error )
 
