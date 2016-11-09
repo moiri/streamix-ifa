@@ -3,7 +3,7 @@
 """Compatibility check of interface automata"""
 
 __author__ = "Simon Maurer"
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 __maintainer__ = "Simon Maurer"
 __email__ = "s.maurer@herts.ac.uk"
 __status__ = "Prototype"
@@ -21,42 +21,36 @@ args = parser.parse_args()
 
 def main():
     """main program entry point"""
-
     f = open( args.infile, 'r' )
 
     j_ifas = json.load( f )
-    g = ifaProd( j_ifas )
+    g = ifaFold( j_ifas )
 
     # igraph.plot( g, layout = g.layout_mds() )
-    igraph.plot( g )
+    ifaPlot( g )
 
 def json2igraph( j_ifa ):
+    """macro function to call the right conversion function"""
     if args.graph_type == 'circle':
-        return json2igraphCircle( j_ifa )
+        return json2igraphCircular( j_ifa )
     elif args.graph_type == 'line':
-        return json2igraphLine( j_ifa )
+        return json2igraphLinear( j_ifa )
     else:
-        return json2igraphCircle( j_ifa )
+        return json2igraphCircular( j_ifa )
 
-def json2igraphLine( j_ifa ):
+def json2igraphLinear( j_ifa ):
     """generate linear interface automata graph out of json description"""
-
-    g_ifa = igraph.Graph( len( j_ifa['ports'] ) + 1, None, True )
+    g_ifa = ifaCreateGraphLinear( len( j_ifa['ports'] ) + 1 )
     for port_idx, port in enumerate( j_ifa['ports'] ):
         # prepare strings
         mode = port[-1:]
         port_str = port[0:-1]
-        label = port_str + mode
-        g_ifa.add_edge( port_idx, port_idx + 1, label=label, name=port_str, mode=mode )
+        g_ifa.add_edge( port_idx, port_idx + 1, name=port_str, mode=mode )
 
-    v = g_ifa.vs.select( _degree_eq=1 )
-    v['color'] = "green"
-    g_ifa.vs[0]['color'] = "blue"
     return g_ifa
 
-def json2igraphCircle( j_ifa ):
+def json2igraphCircular( j_ifa ):
     """generate circular interface automata graph out of json description"""
-
     g_ifa = igraph.Graph( len( j_ifa['ports'] ), None, True )
     idx = 0
     idx_src = 0
@@ -106,8 +100,7 @@ def json2igraphCircle( j_ifa ):
                     # last action of a path
                     idx_dst = idx_path_end
 
-                label = act + mode
-                g_ifa.add_edge( idx_src, idx_dst, label=label, name=act, mode=mode )
+                g_ifa.add_edge( idx_src, idx_dst, name=act, mode=mode )
 
             #remember where the path ended
             if path_idx is 0:
@@ -119,42 +112,74 @@ def json2igraphCircle( j_ifa ):
 
 def isActionShared( edge1, edge2 ):
     """check whether the two edges are shared actions"""
-
-    attr1 = edge1.attributes()
-    attr2 = edge2.attributes()
-    if( attr1['name'] == attr2['name'] ):
-        if ( ( attr1['mode'] == '?' and attr2['mode'] == '!' ) or
-                ( attr1['mode'] == '!' and attr2['mode'] == '?' ) ):
+    if( edge1['name'] == edge2['name'] ):
+        if ( ( edge1['mode'] == '?' and edge2['mode'] == '!' ) or
+                ( edge1['mode'] == '!' and edge2['mode'] == '?' ) ):
             return True
         else:
-            print attr1['label'] + " and " + attr2['label'] + " are incompatible!\n"
-            return False
+            raise ValueError( edge1['name'] + edge1['mode'] + " and " +
+                    edge2['name'] + attr['mode'] + " are incompatible!" )
     else:
         return False
 
-def setColor( v1, v2, g, v ):
-    if ( "green" in v1['color'] ) and ( "green" in v2['color'] ):
-        g.vs( v )['color'] = "green"
-    elif ( ( "green" in v1['color'] ) or ( "green" in v2['color'] ) or
-            ( "yellow" in v1['color'] ) or ( "yellow" in v2['color'] ) ):
-        g.vs( v )['color'] = "yellow"
-
 def addActShared( g1, g2, g, act1, act2, mod ):
     """add shared action to the new graph"""
+    name = act1['name']
+    src = getFoldVertexIdx( mod, act1.source, act2.source )
+    dst = getFoldVertexIdx( mod, act1.target, act2.target )
 
-    attr = act1.attributes()
-    name = attr['name']
-    label = name + ';'
-    src = mod * act1.source + act2.source
-    dst = mod * act1.target + act2.target
-    setColor( g1.vs( act1.source ), g2.vs( act2.source ), g, src )
-    setColor( g1.vs( act1.target ), g2.vs( act2.target ), g, dst )
+    g.add_edge( src, dst, name=name, mode=';' )
 
-    g.add_edge( src, dst, label=label, name=name, mode=';' )
+def getFoldVertexIdx( mod, q, r ):
+    """calculate the index of the folded state"""
+    return mod * q + r
 
-def ifaProd( j_ifas ):
+def ifaCreateGraph( v_cnt ):
+    """create a new generic IFA graph"""
+    g = igraph.Graph( v_cnt, None, True )
+    g.vs['init'] = False
+    g.vs['end'] = False
+    g.vs['error'] = False
+    g.vs['reach'] = True
+    return g
+
+def ifaCreateGraphFold( g1, g2, mod ):
+    """create a new fold graph"""
+    g = ifaCreateGraph( g1.vcount() * g2.vcount() )
+    for v1 in g1.vs.select( init=True ):
+        for v2 in g2.vs.select( init=True ):
+            g.vs( getFoldVertexIdx( mod, v1.index, v2.index ) )['init'] = True
+    for v1 in g1.vs.select( end=True ):
+        for v2 in g2.vs.select( end=True ):
+            g.vs( getFoldVertexIdx( mod, v1.index, v2.index ) )['end'] = True
+    return g
+
+def ifaCreateGraphCircular( v_cnt ):
+    """create a new circualr graph"""
+    g = ifaCreateGraph( v_cnt )
+    g.vs( 0 )['init'] = True
+    g.vs( 0 )['end'] = True
+    return g
+
+def ifaCreateGraphLinear( v_cnt ):
+    """create a new linear graph"""
+    g = ifaCreateGraph( v_cnt )
+    g.vs( 0 )['init'] = True
+    g.vs( v_cnt - 1 )['end'] = True
+    return g
+
+def ifaPlot( g ):
+    """plot the graph"""
+    g.vs['color'] = "black"
+    g.vs.select( end=True )['color'] = "green"
+    g.vs.select( init=True )['color'] = "blue"
+    g.vs.select( error=True )['color'] = "red"
+    g.vs.select( reach=False )['color'] = "white"
+    g.es['label'] = [ n + m for n, m in zip( g.es['name'], g.es['mode'] ) ]
+    igraph.plot( g )
+
+def ifaFold( j_ifas ):
     """create the product of a list of ifas"""
-
     g_prod = None
     for j_ifa in j_ifas:
         # init
@@ -163,17 +188,16 @@ def ifaProd( j_ifas ):
             continue
 
         g_ifa = json2igraph( j_ifa )
-        g_new = igraph.Graph( g_ifa.vcount() * g_prod.vcount(), None, True )
-        g_new.vs[0]['color'] = "blue"
+        mod = g_ifa.vcount()
+        g_new = ifaCreateGraphFold( g_prod, g_ifa, mod )
 
         if args.step:
-            igraph.plot( g_prod )
-            igraph.plot( g_ifa )
+            ifaPlot( g_prod )
+            ifaPlot( g_ifa )
 
         # find shared actions
         del1 = []
         del2 = []
-        mod = g_ifa.vcount()
         for act1 in g_prod.es:
             for act2 in g_ifa.es:
                 if( isActionShared( act1, act2 ) ):
@@ -186,45 +210,31 @@ def ifaProd( j_ifas ):
 
         # find independant actions in g_prod
         for act in g_prod.es:
-            attr = act.attributes()
             for idx in range( 0, g_ifa.vcount() ):
-                src = mod * act.source + idx
-                dst = mod * act.target + idx
-                g_new.add_edge( src, dst, label=attr['label'], name=attr['name'], mode=attr['mode'] )
+                src = getFoldVertexIdx( mod, act.source, idx )
+                dst = getFoldVertexIdx( mod, act.target, idx )
+                g_new.add_edge( src, dst, name=act['name'], mode=act['mode'] )
 
         # find independant actions in g_ifa
         for act in g_ifa.es:
-            attr = act.attributes()
             for idx in range( 0, g_prod.vcount() ):
-                src = mod * idx + act.source
-                dst = mod * idx + act.target
-                g_new.add_edge( src, dst, label=attr['label'], name=attr['name'], mode=attr['mode'] )
+                src = getFoldVertexIdx( mod, idx, act.source )
+                dst = getFoldVertexIdx( mod, idx, act.target )
+                g_new.add_edge( src, dst, name=act['name'], mode=act['mode'] )
 
         # get unreachable states
-        vs_unreachable = []
-        for state in g_new.vs:
-            if state.index == 0:
-                continue
-            if g_new.adhesion(0, state.index) == 0:
-                vs_unreachable.append( state.index )
+        g_new_init = g_new.vs.find( init=True ).index
+        for state in g_new.vs.select( init=False ):
+            if g_new.adhesion( g_new_init, state.index ) == 0:
+                state['reach'] = False
 
         if args.show_unreachable:
-            vs_sec = g_new.vs.select( vs_unreachable )
-            vs_sec['color'] = 'white'
-            igraph.plot( g_new )
+            ifaPlot( g_new )
 
-        g_new.delete_vertices( vs_unreachable )
+        g_new.delete_vertices( g_new.vs.select( reach=False ) )
 
         # get error states
-        vs_error = []
-        for state in g_new.vs:
-            if state.index == 0:
-                continue
-            if g_new.adhesion( state.index, 0 ) == 0:
-                vs_error.append( state.index )
-
-        vs_sec = g_new.vs.select( vs_error )
-        # vs_sec['color'] = 'yellow'
+        vs_error = g_new.vs.select( _outdegree_eq=0, end=False )['error'] = True
         if args.remove_error:
             g_new.delete_vertices( vs_error )
 
