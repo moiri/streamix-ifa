@@ -44,8 +44,10 @@ def json2igraphLinear( j_ifa ):
     for port_idx, port in enumerate( j_ifa['ports'] ):
         # prepare strings
         mode = port[-1:]
-        port_str = port[0:-1]
-        g_ifa.add_edge( port_idx, port_idx + 1, name=port_str, mode=mode )
+        name = port[0:-1]
+        names = name.split( "&" )
+        g_ifa.add_vertices( getTreeVertexCnt( len( names ) ) )
+        createTree( g_ifa, port_idx, port_idx + 1, names, mode )
 
     return g_ifa
 
@@ -130,9 +132,33 @@ def addActShared( g1, g2, g, act1, act2, mod ):
 
     g.add_edge( src, dst, name=name, mode=';' )
 
+def createTree( g, start_idx, end_idx, names, mode ):
+    """insert a tree shaped graph between two states"""
+    mod = len( names )
+    if mod == 1:
+        g.add_edge( start_idx, end_idx, name=names[0], mode=mode )
+        return start_idx + 1
+
+    delta = 1
+    idx_to = start_idx + 1
+    for idx in range( mod ):
+        if idx_to == end_idx:
+            idx_to = idx_to + 1
+        g.add_edge( start_idx, idx_to, name=names[idx], mode=mode )
+        names_child = [ x for i, x in enumerate( names ) if i is not idx ]
+        idx_to = createTree( g, idx_to, end_idx, names_child , mode )
+
+    return idx_to
+
 def getFoldVertexIdx( mod, q, r ):
     """calculate the index of the folded state"""
     return mod * q + r
+
+def getTreeVertexCnt( depth ):
+    v_add = 0
+    for fact in range( 2, depth + 1 ):
+        v_add = fact * ( v_add + 1 )
+    return v_add
 
 def ifaCreateGraph( v_cnt ):
     """create a new generic IFA graph"""
@@ -249,3 +275,4 @@ def ifaFold( j_ifas ):
 
 if __name__ == "__main__":
     main()
+
