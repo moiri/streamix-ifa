@@ -12,7 +12,7 @@ import igraph, json, itertools, math
 import sys, argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument( '-g', '--graph-type', help='set the type of graph (default: circle)' )
+parser.add_argument( '-g', '--graph-type', help='set the type of graph: linear,  circle (default)' )
 parser.add_argument( '-u', '--show-unreachable', action='store_true', help='show unreachable states' )
 parser.add_argument( '-r', '--remove-error', action='store_true', help='remove error states' )
 parser.add_argument( '-s', '--step', action='store_true', help='show all intermediate interface automata' )
@@ -32,7 +32,7 @@ def json2igraph( j_ifa ):
     """macro function to call the right conversion function"""
     if args.graph_type == 'circle':
         return json2igraphCircular( j_ifa )
-    elif args.graph_type == 'line':
+    elif args.graph_type == 'linear':
         return json2igraphLinear( j_ifa )
     else:
         return json2igraphCircular( j_ifa )
@@ -212,7 +212,6 @@ def ifaFoldAll( j_ifas ):
         if g_prod is None:
             g_prod = json2igraph( j_ifa )
             continue
-
         g_ifa = json2igraph( j_ifa )
 
         if args.step:
@@ -221,13 +220,13 @@ def ifaFoldAll( j_ifas ):
 
         g_fold = ifaFold( g_prod, g_ifa )
 
-        # get unreachable states
+        # set unreachable states
         g_fold_init = g_fold.vs.find( init=True ).index
         for state in g_fold.vs.select( init=False ):
             if g_fold.adhesion( g_fold_init, state.index ) == 0:
                 state['reach'] = False
 
-        # get error states
+        # set error states
         vs_error = g_fold.vs.select( _outdegree_eq=0, end=False )['error'] = True
 
         if args.show_unreachable:
