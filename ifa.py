@@ -24,7 +24,7 @@ def main():
     f = open( args.infile, 'r' )
 
     j_ifas = json.load( f )
-    g = ifaFold( j_ifas )
+    g = ifaFoldAll( j_ifas )
 
     ifaPlot( g )
 
@@ -169,7 +169,42 @@ def ifaPlot( g ):
     # igraph.plot( g, layout = g.layout_mds() )
     igraph.plot( g )
 
-def ifaFold( j_ifas ):
+def ifaFold( g1, g2 ):
+    """fold two graphs together"""
+    # create new graph
+    mod = g2.vcount()
+    g = ifaCreateGraphFold( g1, g2, mod )
+
+    # find shared actions
+    del1 = []
+    del2 = []
+    for act1 in g1.es:
+        for act2 in g2.es:
+            if( isActionShared( act1, act2 ) ):
+                addActShared( g1, g2, g, act1, act2, mod )
+                del1.append( act1.index )
+                del2.append( act2.index )
+
+    g1.delete_edges( del1 )
+    g2.delete_edges( del2 )
+
+    # find independant actions in g_prod
+    for act in g1.es:
+        for idx in range( 0, g2.vcount() ):
+            src = getFoldVertexIdx( mod, act.source, idx )
+            dst = getFoldVertexIdx( mod, act.target, idx )
+            g.add_edge( src, dst, name=act['name'], mode=act['mode'] )
+
+    # find independant actions in g_ifa
+    for act in g2.es:
+        for idx in range( 0, g1.vcount() ):
+            src = getFoldVertexIdx( mod, idx, act.source )
+            dst = getFoldVertexIdx( mod, idx, act.target )
+            g.add_edge( src, dst, name=act['name'], mode=act['mode'] )
+
+    return g
+
+def ifaFoldAll( j_ifas ):
     """create the product of a list of ifas"""
     g_prod = None
     for j_ifa in j_ifas:
@@ -179,60 +214,33 @@ def ifaFold( j_ifas ):
             continue
 
         g_ifa = json2igraph( j_ifa )
-        mod = g_ifa.vcount()
-        g_new = ifaCreateGraphFold( g_prod, g_ifa, mod )
 
         if args.step:
             ifaPlot( g_prod )
             ifaPlot( g_ifa )
 
-        # find shared actions
-        del1 = []
-        del2 = []
-        for act1 in g_prod.es:
-            for act2 in g_ifa.es:
-                if( isActionShared( act1, act2 ) ):
-                    addActShared( g_prod, g_ifa, g_new, act1, act2, mod )
-                    del1.append( act1.index )
-                    del2.append( act2.index )
-
-        g_prod.delete_edges( del1 )
-        g_ifa.delete_edges( del2 )
-
-        # find independant actions in g_prod
-        for act in g_prod.es:
-            for idx in range( 0, g_ifa.vcount() ):
-                src = getFoldVertexIdx( mod, act.source, idx )
-                dst = getFoldVertexIdx( mod, act.target, idx )
-                g_new.add_edge( src, dst, name=act['name'], mode=act['mode'] )
-
-        # find independant actions in g_ifa
-        for act in g_ifa.es:
-            for idx in range( 0, g_prod.vcount() ):
-                src = getFoldVertexIdx( mod, idx, act.source )
-                dst = getFoldVertexIdx( mod, idx, act.target )
-                g_new.add_edge( src, dst, name=act['name'], mode=act['mode'] )
+        g_fold = ifaFold( g_prod, g_ifa )
 
         # get unreachable states
-        g_new_init = g_new.vs.find( init=True ).index
-        for state in g_new.vs.select( init=False ):
-            if g_new.adhesion( g_new_init, state.index ) == 0:
+        g_fold_init = g_fold.vs.find( init=True ).index
+        for state in g_fold.vs.select( init=False ):
+            if g_fold.adhesion( g_fold_init, state.index ) == 0:
                 state['reach'] = False
 
         # get error states
-        vs_error = g_new.vs.select( _outdegree_eq=0, end=False )['error'] = True
+        vs_error = g_fold.vs.select( _outdegree_eq=0, end=False )['error'] = True
 
         if args.show_unreachable:
-            ifaPlot( g_new )
+            ifaPlot( g_fold )
 
-        g_new.delete_vertices( g_new.vs.select( reach=False ) )
+        g_fold.delete_vertices( g_fold.vs.select( reach=False ) )
 
         if args.remove_error:
-            g_new.delete_vertices( vs_error )
+            g_fold.delete_vertices( vs_error )
 
-        g_prod = g_new
+        g_prod = g_fold
 
-    return g_new
+    return g_fold
 
 if __name__ == "__main__":
     main()
