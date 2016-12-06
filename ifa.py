@@ -11,28 +11,48 @@ __status__ = "Prototype"
 import igraph, json, itertools, math
 import sys, argparse
 
+sys.settrace
 parser = argparse.ArgumentParser()
-parser.add_argument( '-g', '--graph-type', help='set the type of graph: linear,  circle (default)' )
+parser.add_argument( '-j', '--json-graph-type', help='set the type of json graph: linear, circle (deafault)' )
+parser.add_argument( '-t', '--graph-type', help='set the type of graph: json, gml (deafault)' )
 parser.add_argument( '-u', '--show-unreachable', action='store_true', help='show unreachable states' )
 parser.add_argument( '-r', '--remove-error', action='store_true', help='remove error states' )
 parser.add_argument( '-s', '--step', action='store_true', help='show all intermediate interface automata' )
-parser.add_argument( 'infile' )
+parser.add_argument( 'infiles', nargs='+' )
 args = parser.parse_args()
 
 def main():
     """main program entry point"""
-    f = open( args.infile, 'r' )
-
-    j_ifas = json.load( f )
-    g = ifaFoldAll( j_ifas )
+    if args.graph_type == 'json':
+        j_ifas = json.load( open( args.infiles[0], 'r' ) )
+        g = ifaFoldAllJson( j_ifas )
+    elif args.graph_type == 'gml':
+        g = ifaFoldAllGml( args.infiles )
+    else:
+        g = ifaFoldAllGml( args.infiles )
 
     ifaPlot( g )
 
+def gml2igraph( gml ):
+    g = igraph.load( gml, format="gml" )
+    g.vs['error'] = False
+    g.vs['reach'] = True
+    for v in g.vs:
+        if not v['init']:
+            v['init'] = False
+        if not v['end']:
+            v['end'] = False
+    for e in g.es:
+        e['name'] = e['label'][0:-1]
+        e['mode'] = e['label'][-1:]
+    igraph.write(g, "test.gml")
+    return g
+
 def json2igraph( j_ifa ):
     """macro function to call the right conversion function"""
-    if args.graph_type == 'circle':
+    if args.json_graph_type == 'circle':
         return json2igraphCircular( j_ifa )
-    elif args.graph_type == 'linear':
+    elif args.json_graph_type == 'linear':
         return json2igraphLinear( j_ifa )
     else:
         return json2igraphCircular( j_ifa )
@@ -204,38 +224,60 @@ def ifaFold( g1, g2 ):
 
     return g
 
-def ifaFoldAll( j_ifas ):
+def ifaPostProcess( g_fold ):
+    # set unreachable states
+    g_fold_init = g_fold.vs.find( init=True ).index
+    for state in g_fold.vs.select( init=False ):
+        if g_fold.adhesion( g_fold_init, state.index ) == 0:
+            state['reach'] = False
+
+    # set error states
+    vs_error = g_fold.vs.select( _outdegree_eq=0, end=False )['error'] = True
+
+    if args.show_unreachable:
+        ifaPlot( g_fold )
+
+    g_fold.delete_vertices( g_fold.vs.select( reach=False ) )
+
+    if args.remove_error:
+        g_fold.delete_vertices( vs_error )
+
+def ifaPreProcess( g_prod, g_ifa ):
+    if args.step:
+        ifaPlot( g_prod )
+        ifaPlot( g_ifa )
+
+def ifaFoldAllJson( j_ifas ):
     """create the product of a list of ifas"""
     g_prod = None
     for j_ifa in j_ifas:
         # init
         if g_prod is None:
-            g_prod = json2igraph( j_ifa )
+            g_fold = g_prod = json2igraph( j_ifa )
             continue
         g_ifa = json2igraph( j_ifa )
 
-        if args.step:
-            ifaPlot( g_prod )
-            ifaPlot( g_ifa )
-
+        ifaPreProcess( g_prod, g_ifa )
         g_fold = ifaFold( g_prod, g_ifa )
+        ifaPostProcess( g_fold )
 
-        # set unreachable states
-        g_fold_init = g_fold.vs.find( init=True ).index
-        for state in g_fold.vs.select( init=False ):
-            if g_fold.adhesion( g_fold_init, state.index ) == 0:
-                state['reach'] = False
+        g_prod = g_fold
 
-        # set error states
-        vs_error = g_fold.vs.select( _outdegree_eq=0, end=False )['error'] = True
+    return g_fold
 
-        if args.show_unreachable:
-            ifaPlot( g_fold )
+def ifaFoldAllGml( gmls ):
+    """create the product of a list of ifas"""
+    g_prod = None
+    for gml in gmls:
+        # init
+        if g_prod is None:
+            g_fold = g_prod = gml2igraph( gml )
+            continue
+        g_ifa = gml2igraph( gml )
 
-        g_fold.delete_vertices( g_fold.vs.select( reach=False ) )
-
-        if args.remove_error:
-            g_fold.delete_vertices( vs_error )
+        ifaPreProcess( g_prod, g_ifa )
+        g_fold = ifaFold( g_prod, g_ifa )
+        ifaPostProcess( g_fold )
 
         g_prod = g_fold
 
