@@ -43,7 +43,6 @@ def gml2igraph( gml ):
     for e in g.es:
         e['name'] = e['label'][0:-1]
         e['mode'] = e['label'][-1:]
-    igraph.write(g, "test.gml")
     return g
 
 def json2igraph( j_ifa ):
