@@ -12,23 +12,21 @@ import igraph, json, itertools, math
 import sys, argparse
 
 sys.settrace
-parser = argparse.ArgumentParser()
-parser.add_argument( '-j', '--json-graph-type', help='set the type of json graph: linear, circle (deafault)' )
-parser.add_argument( '-t', '--graph-type', help='set the type of graph: json, gml (deafault)' )
-parser.add_argument( '-u', '--show-unreachable', action='store_true', help='show unreachable states' )
+parser = argparse.ArgumentParser('This script performs the folding operation on interface automata passed as gml graph files')
+parser.add_argument( '-f', metavar="FORMAT", dest='format', choices=['gml', 'json'], default='gml', help='set the format of the input graph (default: gml)' )
+parser.add_argument( '-j', metavar="TOPO", dest='j_topo', choices=['linear', 'circle'], default='circle', help='set the topology of json input graph (default: circle)' )
+parser.add_argument( '-u', '--unreachable', action='store_true', help='show unreachable states' )
 parser.add_argument( '-r', '--remove-error', action='store_true', help='remove error states' )
 parser.add_argument( '-s', '--step', action='store_true', help='show all intermediate interface automata' )
-parser.add_argument( 'infiles', nargs='+' )
+parser.add_argument( 'infiles', nargs='+', metavar="ifa.gml" )
 args = parser.parse_args()
 
 def main():
     """main program entry point"""
-    if args.graph_type == 'json':
+    if args.format == 'json':
         j_ifas = json.load( open( args.infiles[0], 'r' ) )
         g = ifaFoldAllJson( j_ifas )
-    elif args.graph_type == 'gml':
-        g = ifaFoldAllGml( args.infiles )
-    else:
+    elif args.format == 'gml':
         g = ifaFoldAllGml( args.infiles )
 
     ifaPlot( g )
@@ -50,12 +48,10 @@ def gml2igraph( gml ):
 
 def json2igraph( j_ifa ):
     """macro function to call the right conversion function"""
-    if args.json_graph_type == 'circle':
+    if args.j_topo == 'circle':
         return json2igraphCircular( j_ifa )
-    elif args.json_graph_type == 'linear':
+    elif args.j_topo == 'linear':
         return json2igraphLinear( j_ifa )
-    else:
-        return json2igraphCircular( j_ifa )
 
 def json2igraphLinear( j_ifa ):
     """generate linear interface automata graph out of json description"""
@@ -159,9 +155,9 @@ def ifaCreateGraphFold( g1, g2, mod ):
         for v2 in g2.vs.select( end=True ):
             g.vs( getFoldVertexIdx( mod, v1.index, v2.index ) )['end'] = True
     for v in g1.vs.select( error=True ):
-        g.vs( getFoldVertexIdx( mod, v.index, idx ) for idx in range( g2.vcount() - 1 ) )['error'] = True
+        g.vs( getFoldVertexIdx( mod, v.index, idx ) for idx in range( g2.vcount() ) )['error'] = True
     for v in g2.vs.select( error=True ):
-        g.vs( getFoldVertexIdx( mod, idx, v.index ) for idx in range( g1.vcount() - 1 ) )['error'] = True
+        g.vs( getFoldVertexIdx( mod, idx, v.index ) for idx in range( g1.vcount() ) )['error'] = True
     return g
 
 def ifaCreateGraphCircular( v_cnt ):
@@ -232,13 +228,14 @@ def ifaPostProcess( g_fold ):
             state['reach'] = False
 
     # set error states
-    vs_error = g_fold.vs.select( _outdegree_eq=0, end=False )['error'] = True
+    g_fold.vs.select( _outdegree_eq=0, end=False )['error'] = True
 
-    if args.show_unreachable:
+    if args.unreachable:
         ifaPlot( g_fold )
 
     g_fold.delete_vertices( g_fold.vs.select( reach=False ) )
 
+    vs_error = g_fold.vs.select( error=True )
     if args.remove_error:
         g_fold.delete_vertices( vs_error )
 
