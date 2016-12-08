@@ -14,7 +14,7 @@ import sys, argparse
 sys.settrace
 parser = argparse.ArgumentParser('This script performs the folding operation on interface automata passed as gml graph files')
 parser.add_argument( '-f', metavar="FORMAT", dest='format', choices=['gml', 'json'], default='gml', help='set the format of the input graph (default: gml)' )
-parser.add_argument( '-j', metavar="TOPO", dest='j_topo', choices=['linear', 'circle'], default='circle', help='set the topology of json input graph (default: circle)' )
+parser.add_argument( '-j', metavar="TOPO", dest='j_topo', choices=['linear', 'circle', 'streamix'], default='circle', help='set the topology of json input graph (default: circle)' )
 parser.add_argument( '-u', '--unreachable', action='store_true', help='show unreachable states' )
 parser.add_argument( '-r', '--remove-error', action='store_true', help='remove error states' )
 parser.add_argument( '-s', '--step', action='store_true', help='show all intermediate interface automata' )
@@ -48,43 +48,21 @@ def gml2igraph( gml ):
 def json2igraph( j_ifa ):
     """macro function to call the right conversion function"""
     if args.j_topo == 'circle':
-        return json2igraphCircular( j_ifa )
+        g = ifaCreateGraphCircular( len( j_ifa['ports'] ) )
+        ifaAddEdges( g, j_ifa['ports'], 0, True )
     elif args.j_topo == 'linear':
-        return json2igraphLinear( j_ifa )
-
-def json2igraphLinear( j_ifa ):
-    """generate linear interface automata graph out of json description"""
-    g_ifa = ifaCreateGraphLinear( len( j_ifa['ports'] ) + 1 )
-    for port_idx, port in enumerate( j_ifa['ports'] ):
-        # prepare strings
-        mode = port[-1:]
-        name = port[0:-1]
-        names = name.split( "&" )
-
-        # generate update the graph
-        g_ifa.add_vertices( getTreeVertexCnt( len( names ) ) )
-        createAmpTree( g_ifa, port_idx, port_idx + 1, names, mode )
-
-    return g_ifa
-
-def json2igraphCircular( j_ifa ):
-    """generate circular interface automata graph out of json description"""
-    g_ifa = ifaCreateGraphCircular( len( j_ifa['ports'] ) )
-    for port_idx, port in enumerate( j_ifa['ports'] ):
-        port_end = port_idx + 1
-        if port_end == len( j_ifa['ports'] ):
-            port_end = 0
-
-        # prepare strings
-        mode = port[-1:]
-        name = port[0:-1]
-        names = name.split( "&" )
-
-        # generate update the graph
-        g_ifa.add_vertices( getTreeVertexCnt( len( names ) ) )
-        createAmpTree( g_ifa, port_idx, port_end, names, mode )
-
-    return g_ifa
+        g = ifaCreateGraphLinear( len( j_ifa['ports'] + 1 ) )
+        ifaAddEdges( g, j_ifa['ports'], 0, False )
+    elif args.j_topo == 'streamix':
+        vc_pre = len( j_ifa['pre'] )
+        vc_body = len( j_ifa['body'] )
+        vc_post = len( j_ifa['post'] )
+        g = ifaCreateGraphStreamix( vc_pre, vc_body, vc_post )
+        ifaAddEdges( g, j_ifa['pre'], 0, False )
+        ifaAddEdges( g, j_ifa['body'], vc_pre, True )
+        ifaAddEdges( g, j_ifa['post'], vc_pre + vc_body - 1, False )
+    ifaPlot(g)
+    return g
 
 def isActionShared( edge1, edge2 ):
     """check whether the two edges are shared actions"""
@@ -106,8 +84,25 @@ def addActShared( g1, g2, g, act1, act2, mod ):
 
     g.add_edge( src, dst, name=name, mode=';' )
 
+def ifaAddEdges( g, edges, offset, circle ):
+    """insert edges between two states"""
+    for idx, port in enumerate( edges ):
+        port_idx = idx + offset
+        port_end = port_idx + 1
+        if circle and ( port_end - offset == len( edges ) ):
+            port_end = offset
+
+        # prepare strings
+        mode = port[-1:]
+        name = port[0:-1]
+        names = name.split( "&" )
+
+        # generate update the graph
+        g.add_vertices( getTreeVertexCnt( len( names ) ) )
+        createAmpTree( g, port_idx, port_end, names, mode )
+
 def createAmpTree( g, start_idx, end_idx, names, mode ):
-    """insert a &-tree shaped graph between two states"""
+    """insert a &-tree shaped graph between two states (recursive)"""
     mod = len( names )
     if mod == 1:
         g.add_edge( start_idx, end_idx, name=names[0], mode=mode )
@@ -159,6 +154,16 @@ def ifaCreateGraphFold( g1, g2, mod ):
         g.vs( getFoldVertexIdx( mod, idx, v.index ) for idx in range( g1.vcount() ) )['error'] = True
     return g
 
+def ifaCreateGraphStreamix( vc_pre, vc_body, vs_post ):
+    """create a new streamix graph"""
+    v_cnt = vc_pre + vc_body + vs_post
+    g = ifaCreateGraph( v_cnt )
+    g.vs( 0 )['init'] = True
+    g.vs( vc_pre )['ground'] = True
+    g.vs( v_cnt - 1 )['end'] = True
+    return g
+
+
 def ifaCreateGraphCircular( v_cnt ):
     """create a new circualr graph"""
     g = ifaCreateGraph( v_cnt )
@@ -177,8 +182,9 @@ def ifaPlot( g ):
     """plot the graph"""
     g.vs['color'] = "grey"
     g.vs.select( reach=False )['color'] = "white"
-    g.vs.select( end=True )['color'] = "green"
-    g.vs.select( init=True )['shape'] = "square"
+    g.vs.select( end=True )['shape'] = "square"
+    g.vs.select( init=True )['shape'] = "triangle"
+    g.vs.select( ground=True )['shape'] = "diamond"
     g.vs.select( error=True )['color'] = "red"
     g.es['label'] = [ n + m for n, m in zip( g.es['name'], g.es['mode'] ) ]
     # igraph.plot( g, layout = g.layout_mds() )
