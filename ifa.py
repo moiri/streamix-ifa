@@ -56,11 +56,9 @@ def json2igraph( j_ifa ):
     elif args.j_topo == 'streamix':
         vc_pre = len( j_ifa['pre'] )
         vc_body = len( j_ifa['body'] )
-        vc_post = len( j_ifa['post'] )
-        g = ifaCreateGraphStreamix( vc_pre, vc_body, vc_post )
+        g = ifaCreateGraphStreamix( vc_pre, vc_body )
         ifaAddEdges( g, j_ifa['pre'], 0, False )
         ifaAddEdges( g, j_ifa['body'], vc_pre, True )
-        ifaAddEdges( g, j_ifa['post'], vc_pre + vc_body - 1, False )
     return g
 
 def isActionShared( edge1, edge2 ):
@@ -152,13 +150,12 @@ def ifaCreateGraphFold( g1, g2, mod ):
         g.vs( getFoldVertexIdx( mod, idx, v.index ) for idx in range( g1.vcount() ) )['error'] = True
     return g
 
-def ifaCreateGraphStreamix( vc_pre, vc_body, vs_post ):
+def ifaCreateGraphStreamix( vc_pre, vc_body ):
     """create a new streamix graph"""
-    v_cnt = vc_pre + vc_body + vs_post
+    v_cnt = vc_pre + vc_body
     g = ifaCreateGraph( v_cnt )
     g.vs( 0 )['init'] = True
-    g.vs( vc_pre )['ground'] = True
-    g.vs( v_cnt - 1 )['end'] = True
+    g.vs( vc_pre )['end'] = True
     return g
 
 
@@ -182,15 +179,14 @@ def ifaPlot( g ):
     g.vs.select( reach=False )['color'] = "white"
     g.vs.select( end=True )['shape'] = "square"
     g.vs.select( init=True )['shape'] = "diamond"
-    # g.vs.select( ground=True )['shape'] = "diamond"
     g.vs.select( error=True )['color'] = "red"
     g.es['label'] = [ n + m for n, m in zip( g.es['name'], g.es['mode'] ) ]
-    # igraph.plot( g, layout = g.layout_graphopt() )
 
     if args.format == 'gml':
         igraph.plot( g )
     # elif args.j_topo == 'linear':
     #     igraph.plot( g, layout = g.layout_mds() )
+    #     igraph.plot( g, layout = g.layout_graphopt() )
     elif args.j_topo == 'circle':
         igraph.plot( g, layout = g.layout_star() )
     else:
