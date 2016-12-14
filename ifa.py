@@ -51,7 +51,7 @@ def json2igraph( j_ifa ):
         g = ifaCreateGraphCircular( len( j_ifa['ports'] ) )
         ifaAddEdges( g, j_ifa['ports'], 0, True )
     elif args.j_topo == 'linear':
-        g = ifaCreateGraphLinear( len( j_ifa['ports'] + 1 ) )
+        g = ifaCreateGraphLinear( len( j_ifa['ports'] ) + 1 )
         ifaAddEdges( g, j_ifa['ports'], 0, False )
     elif args.j_topo == 'streamix':
         vc_pre = len( j_ifa['pre'] )
@@ -61,7 +61,6 @@ def json2igraph( j_ifa ):
         ifaAddEdges( g, j_ifa['pre'], 0, False )
         ifaAddEdges( g, j_ifa['body'], vc_pre, True )
         ifaAddEdges( g, j_ifa['post'], vc_pre + vc_body - 1, False )
-    ifaPlot(g)
     return g
 
 def isActionShared( edge1, edge2 ):
@@ -86,9 +85,12 @@ def addActShared( g1, g2, g, act1, act2, mod ):
 
 def ifaAddEdges( g, edges, offset, circle ):
     """insert edges between two states"""
+    next_idx = 0
     for idx, port in enumerate( edges ):
         port_idx = idx + offset
         port_end = port_idx + 1
+        if next_idx == 0:
+            next_idx = g.vcount()
         if circle and ( port_end - offset == len( edges ) ):
             port_end = offset
 
@@ -99,25 +101,21 @@ def ifaAddEdges( g, edges, offset, circle ):
 
         # generate update the graph
         g.add_vertices( getTreeVertexCnt( len( names ) ) )
-        createAmpTree( g, port_idx, port_end, names, mode )
+        next_idx = createAmpTree( g, port_idx, port_end, next_idx, names, mode )
 
-def createAmpTree( g, start_idx, end_idx, names, mode ):
+def createAmpTree( g, start_idx, end_idx, next_idx, names, mode ):
     """insert a &-tree shaped graph between two states (recursive)"""
     mod = len( names )
     if mod == 1:
         g.add_edge( start_idx, end_idx, name=names[0], mode=mode )
-        return start_idx + 1
+        return next_idx
 
-    delta = 1
-    idx_to = start_idx + 1
     for idx in range( mod ):
-        if idx_to == end_idx:
-            idx_to = idx_to + 1
-        g.add_edge( start_idx, idx_to, name=names[idx], mode=mode )
+        g.add_edge( start_idx, next_idx, name=names[idx], mode=mode )
         names_child = [ x for i, x in enumerate( names ) if i is not idx ]
-        idx_to = createAmpTree( g, idx_to, end_idx, names_child , mode )
+        next_idx = createAmpTree( g, next_idx, end_idx, next_idx + 1, names_child, mode )
 
-    return idx_to
+    return next_idx
 
 def getFoldVertexIdx( mod, q, r ):
     """calculate the index of the folded state"""
@@ -183,12 +181,20 @@ def ifaPlot( g ):
     g.vs['color'] = "grey"
     g.vs.select( reach=False )['color'] = "white"
     g.vs.select( end=True )['shape'] = "square"
-    g.vs.select( init=True )['shape'] = "triangle"
-    g.vs.select( ground=True )['shape'] = "diamond"
+    g.vs.select( init=True )['shape'] = "diamond"
+    # g.vs.select( ground=True )['shape'] = "diamond"
     g.vs.select( error=True )['color'] = "red"
     g.es['label'] = [ n + m for n, m in zip( g.es['name'], g.es['mode'] ) ]
-    # igraph.plot( g, layout = g.layout_mds() )
-    igraph.plot( g )
+    # igraph.plot( g, layout = g.layout_graphopt() )
+
+    if args.format == 'gml':
+        igraph.plot( g )
+    # elif args.j_topo == 'linear':
+    #     igraph.plot( g, layout = g.layout_mds() )
+    elif args.j_topo == 'circle':
+        igraph.plot( g, layout = g.layout_star() )
+    else:
+        igraph.plot( g )
 
 def ifaFold( g1, g2 ):
     """fold two graphs together"""
