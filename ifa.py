@@ -15,6 +15,7 @@ sys.settrace
 parser = argparse.ArgumentParser('This script performs the folding operation on interface automata passed as gml graph files')
 parser.add_argument( '-f', metavar="FORMAT", dest='format', choices=['gml', 'json'], default='gml', help='set the format of the input graph (default: gml)' )
 parser.add_argument( '-j', metavar="TOPO", dest='j_topo', choices=['linear', 'circle', 'streamix'], default='circle', help='set the topology of json input graph (default: circle)' )
+parser.add_argument( '-a', metavar="AUTOMATA", dest='automata', choices=['sync', 'buf'], default='sync', help='set the automata type (default: sync)' )
 parser.add_argument( '-u', '--unreachable', action='store_true', help='show graph with unreachable states after folding operation' )
 parser.add_argument( '-s', '--step', action='store_true', help='show all intermediate interface automata' )
 parser.add_argument( 'infiles', nargs='+', metavar="INFILE" )
@@ -28,12 +29,15 @@ def main():
     elif args.format == 'gml':
         a = ifaFoldAll( args.infiles, gml2igraph )
 
+    # a.plot( layout="star" )
     a.plot()
-    # print a.isDeadlocking()
 
 def gml2igraph( gml ):
     g = igraph.load( gml, format="gml" )
+    g["name"] = g.vs[0]["name"]
+    g.vs[0].delete()
     g.vs['reach'] = True
+    g.es['weight'] = 1
     for v in g.vs:
         if not v['init']:
             v['init'] = False
@@ -58,6 +62,7 @@ def json2igraph( j_ifa ):
         g = ifaCreateGraphStreamix( vc_pre, vc_body )
         ifaAddEdges( g, j_ifa['pre'], 0, False )
         ifaAddEdges( g, j_ifa['body'], vc_pre, True )
+    g["name"] = j_ifa['box']
     return g
 
 def ifaAddEdges( g, edges, offset, circle ):
@@ -84,11 +89,11 @@ def createAmpTree( g, start_idx, end_idx, next_idx, names, mode ):
     """insert a &-tree shaped graph between two states (recursive)"""
     mod = len( names )
     if mod == 1:
-        g.add_edge( start_idx, end_idx, name=names[0], mode=mode )
+        g.add_edge( start_idx, end_idx, name=names[0], mode=mode, weight=1 )
         return next_idx
 
     for idx in range( mod ):
-        g.add_edge( start_idx, next_idx, name=names[idx], mode=mode )
+        g.add_edge( start_idx, next_idx, name=names[idx], mode=mode, weight=1 )
         names_child = [ x for i, x in enumerate( names ) if i is not idx ]
         next_idx = createAmpTree( g, next_idx, end_idx, next_idx + 1, names_child, mode )
 
@@ -132,22 +137,31 @@ def ifaCreateGraphLinear( v_cnt ):
     g.vs( v_cnt - 1 )['end'] = True
     return g
 
+def selectAutomata( g, debug=False ):
+    if args.automata == 'sync':
+        return sa.DlAutomata( g, debug )
+    elif args.automata == 'buf':
+        return sa.StreamDlAutomata( g, debug )
+
 def ifaFoldAll( ifas, cb_parse ):
     """create the product of a list of ifas"""
     a1 = None
     for ifa in ifas:
         if a1 is None:
-            a1 = sa.StreamDlAutomata( cb_parse( ifa ), args.unreachable )
+            a1 = selectAutomata( cb_parse( ifa ), args.unreachable )
             continue
 
-        a2 = sa.StreamDlAutomata( cb_parse( ifa ), args.unreachable )
+        a2 = selectAutomata( cb_parse( ifa ), args.unreachable )
         if args.step:
             a1.plot()
             a2.plot()
-        a1 = a1 * a2
+        af = a1 * a2
+        if af.isDeadlocking():
+            print "Error: sytem is potentially deadlocking at " + a1.name \
+                    + " and " + a2.name
+        a1 = af
 
     return a1
 
 if __name__ == "__main__":
     main()
-
