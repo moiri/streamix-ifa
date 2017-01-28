@@ -1,17 +1,6 @@
 import igraph
 
-class AGraph( object ):
-    def __init__( self, g=None, directed=True, name="g", debug=False ):
-        self.name = name
-        self.g = g
-        if g is None:
-            self.g = igraph.Graph( directed=directed )
-        self.debug = debug
-
-    def _addEpsilonTranistion( self, src, dst ):
-        self.g.add_edge( src, dst, name="eps", mode=';', weight=0 )
-
-class Automata( object ):
+class _Automata( object ):
     """Base Automata class with basic folding operation"""
 
     def __init__( self, g, debug=False ):
@@ -19,28 +8,8 @@ class Automata( object ):
         self.g = g
         self.debug = debug
 
-    def __mul__( self, other ):
-        g = igraph.Graph( directed=True )
-        g1 = self.g.copy()
-        g2 = other.g.copy()
-        mod = self._foldPreprocess( g, g1, g2 )
-        self._fold( g, g1, g2, mod )
-        a = Automata( g, ( self.debug or other.debug ) )
-        a._foldPostprocess()
-        return a
-
     def _addEpsilon( self, g, src, dst ):
         g.add_edge( src, dst, name="eps", mode=';', weight=0 )
-
-    def _getSharedNames( self, g1, g2 ):
-        names = []
-        for act1 in g1.es:
-            for act2 in g2.es:
-                if( self._isActionShared( act1, act2 ) ):
-                    if act1["name"] not in names:
-                        names.append( act1["name"] )
-
-        return names
 
     def _fold( self, g, g1, g2, mod ):
         """fold two graphs together"""
@@ -111,6 +80,16 @@ class Automata( object ):
                 g.vs( idx )['init'] = True
         return mod
 
+    def _getSharedNames( self, g1, g2 ):
+        names = []
+        for act1 in g1.es:
+            for act2 in g2.es:
+                if( self._isActionShared( act1, act2 ) ):
+                    if act1["name"] not in names:
+                        names.append( act1["name"] )
+
+        return names
+
     def _isActionShared( self, edge1, edge2 ):
         """check whether the two edges are shared actions"""
         if( edge1['name'] == edge2['name'] ):
@@ -122,6 +101,15 @@ class Automata( object ):
                         edge2['name'] + edge2['mode'] + " are incompatible!" )
 
         return False
+
+    def _mergeVertices( self, g, v1, v2 ):
+        val, idx = sorted( ( v1, v2 ) )
+        v_new = range( g.vcount() )
+        v_new[idx] = v_new[val]
+        for v in range( idx + 1, len( v_new ) ):
+            v_new[v] -= 1
+        # print v_new
+        g.contract_vertices( v_new, combine_attrs="sum" )
 
     def _plotInit( self, g ):
         """set the colors of the graph vertices and the lables of the edges
@@ -148,26 +136,13 @@ class Automata( object ):
         del g.es['label']
         del g.vs['label']
 
-class DlAutomata( Automata ):
-    """Automata class with deadlock extension for synchronous communication"""
+class _DlAutomata( _Automata ):
+    """Base DlAutomata class with deadlock extension for synchronous
+    communication"""
 
     def __init__( self, g, debug=False ):
-        super( DlAutomata, self ).__init__( g, debug )
+        super( _DlAutomata, self ).__init__( g, debug )
         self.g.vs['dl'] = False
-
-    def __mul__( self, other ):
-        g = igraph.Graph( directed=True )
-        g1 = self.g.copy()
-        g2 = other.g.copy()
-        names_s = self._getSharedNames( g1, g2 )
-        # add non-deterministic epsilon transitions
-        self._epsilonInsert( g1, names_s )
-        self._epsilonInsert( g2, names_s )
-        mod = self._foldPreprocess( g, g1, g2 )
-        self._fold( g, g1, g2, mod )
-        a = DlAutomata( g, ( self.debug or other.debug ) )
-        a._foldPostprocess()
-        return a
 
     def _epsilonInsert( self, g, names_s ):
         e_eps = []
@@ -184,64 +159,28 @@ class DlAutomata( Automata ):
 
         g.delete_edges( e_eps )
 
-    def _epsilonReduce( self, g=None ):
-        # reduce epsilons
-        if g is None: g = self.g
-        e_del = []
-        v_mrg = []
-        for e in g.es( name="eps" ):
-            if e.is_loop(): continue
-            if( g.degree( e.source, mode="OUT" ) == 1 ):
-                # only one output and its an epsilon
-                if( g.vs[ e.source ]["init"] or g.vs[ e.source ]['end'] ) \
-                        and g.degree( e.target, mode="IN" ) > 1:
-                    continue
-                self._mergeVertices( g, e.target, e.source )
-                # v_mrg.append( sorted( ( e.target, e.source ), reverse=True ) )
-                e_del.append( e )
-            elif( g.degree( e.target, mode="IN" ) == 1 ):
-                # v_mrg.append( sorted( ( e.target, e.source ), reverse=True ) )
-                self._mergeVertices( g, e.target, e.source )
-                e_del.append( e )
-
-        g.delete_edges( e_del )
-
-    def _mergeVertices( self, g, v1, v2 ):
-        val, idx = sorted( ( v1, v2 ) )
-        v_new = range( g.vcount() )
-        v_new[idx] = v_new[val]
-        for v in range( idx + 1, len( v_new ) ):
-            v_new[v] -= 1
-        # print v_new
-        g.contract_vertices( v_new, combine_attrs="sum" )
-
-    def _mergeVerticesArray( self, g, v_mrg ):
-        # print sorted(v_mrg)
-        v_new = range( g.vcount() )
-        # print v_new
-        for idx, val in sorted( v_mrg ):
-            v_new[idx] = v_new[val]
-            for v in range( idx + 1, len( v_new ) ):
-                v_new[v] -= 1
-            # print v_new
-        # v_print = {}
-        # for idx, val in enumerate( v_new ):
-        #     if val not in v_print: v_print[val] = []
-        #     v_print[val].append( idx )
-        g.contract_vertices( v_new, combine_attrs="sum" )
-
+    def _foldAddDlv( self, g, g1, g2, mod ):
+        v_dl = g.vcount()
+        g.add_vertex( reach=True, end=False, init=False, dl=True )
+        for v1 in g1.vs:
+            for v2 in g2.vs:
+                for e1 in g1.es( g1.adjacent( v1 ) ):
+                    for e2 in g2.es( g2.adjacent( v2 ) ):
+                        if not self._isActionShared( e1, e2 ):
+                            src = self._foldGetVertexId( mod, e1.source, e2.source )
+                            self._addEpsilon( g, src, v_dl )
 
     def _foldPostprocess( self ):
         """operations after folding"""
-        super( DlAutomata, self )._foldPostprocess()
+        super( _DlAutomata, self )._foldPostprocess()
         # mark deadkocks
         self.g.vs.select( _outdegree_eq=0, end=False )['dl'] = True
         self.g.vs.select( _outdegree_eq=0, end=True, init=True )['dl'] = True
-        self._epsilonReduce()
+        self._reduce()
 
     def _foldPreprocess( self, g, g1, g2 ):
         """operations before folding"""
-        mod = super( DlAutomata, self )._foldPreprocess( g, g1, g2 )
+        mod = super( _DlAutomata, self )._foldPreprocess( g, g1, g2 )
         g.vs['dl'] = False
         # mark end states
         g.vs['end'] = False
@@ -254,12 +193,52 @@ class DlAutomata( Automata ):
 
     def _plotInit( self, g ):
         """plot the graph"""
-        super( DlAutomata, self )._plotInit( g )
+        super( _DlAutomata, self )._plotInit( g )
+        g.es.select( weight=0 )['color'] = "green"
+        for v in g.vs:
+            if v.strength( weights="weight" ) == 0:
+                v["color"] = "green"
         g.vs.select( dl=True )['color'] = "red"
-        # g.es.select( weight=0 )['color'] = "green"
-        # for v in g.vs:
-        #     if v.strength( weights="weight" ) == 0:
-        #         v["color"] = "green"
+
+    def _reduce( self, g=None ):
+        # reduce epsilons
+        if g is None: g = self.g
+        change = True
+        while change:
+            change = False
+            e_del = []
+            for e in g.es( name="eps" ):
+                if e.is_loop(): continue
+                if( g.degree( e.source, mode="OUT" ) == 1 ):
+                    # only one output and its an epsilon
+                    if( g.vs[ e.source ]["init"] or g.vs[ e.source ]['end'] ) \
+                            and g.degree( e.target, mode="IN" ) > 1:
+                        continue
+                    self._mergeVertices( g, e.target, e.source )
+                    e_del.append( e )
+                elif( g.degree( e.target, mode="IN" ) == 1 ):
+                    if g.vs[ e.target ]["dl"]: continue
+                    self._mergeVertices( g, e.target, e.source )
+                    e_del.append( e )
+            if len( e_del ) > 0: change = True
+            g.delete_edges( e_del )
+
+            change = self._removeMultiple( g )
+
+    def _removeMultiple( self, g ):
+        e_del = []
+        e_mul = []
+        for e in g.es:
+            et = ( e.source, e.target, e["name"] )
+            if et not in e_mul:
+                e_mul.append( et )
+            else:
+                e_del.append( e )
+
+        change = False
+        if len( e_del ) > 0: change = True
+        g.delete_edges( e_del )
+        return change
 
     def isDeadlocking( self ):
         """check wheteher automata is deadlocking"""
@@ -267,38 +246,9 @@ class DlAutomata( Automata ):
         return ( vdl > 0 )
 
 
-class StreamDlAutomata( DlAutomata ):
-    """Automata class with deadlock extension for buffered communication"""
-
-    def __init__( self, g, debug=False ):
-        super( StreamDlAutomata, self ).__init__( g, debug )
-
-    def __mul__( self, other ):
-        g = igraph.Graph( directed=True )
-        g1 = self.g.copy()
-        g2 = other.g.copy()
-        names_s = self._getSharedNames( g1, g2 )
-        # add non-deterministic epsilon transitions on shared names
-        self._epsilonInsert( g1, names_s )
-        self._epsilonInsert( g2, names_s )
-        # add queue semantics on shared outputs
-        g1 = self._addQueueSemantics( g1, names_s )
-        g2 = self._addQueueSemantics( g2, names_s )
-        # folding
-        mod = self._foldPreprocess( g, g1, g2 )
-        self._fold( g, g1, g2, mod )
-        a = StreamDlAutomata( g, ( self.debug or other.debug ) )
-        a._foldPostprocess()
-        return a
-
-    def _foldPostprocess( self ):
-        """operations after folding"""
-        super( StreamDlAutomata, self )._foldPostprocess()
-
-    def _foldPreprocess( self, g, g1, g2 ):
-        """operations before folding"""
-        return super( StreamDlAutomata, self )._foldPreprocess( g, g1, g2 )
-
+class _StreamDlAutomata( _DlAutomata ):
+    """Base StreamDlAutomata class with deadlock extension for buffered
+    communication"""
     def _addQueueSemantics( self, g_in, names_s ):
         e_buf = []
         gfinal = None
@@ -345,8 +295,83 @@ class StreamDlAutomata( DlAutomata ):
                 for e in gfinal.es( name=q_name ):
                     e["name"] = name
 
-            self._epsilonReduce( gfinal )
+            self._reduce( gfinal )
 
         if gfinal is None: gfinal = g_in
         return gfinal
 
+
+class DleAutomata( _DlAutomata ):
+    """Automata class with deadlock extension for synchronous communication,
+    introducing epsilon tarnsitions on 'non-deterministic' protocol states"""
+    def __mul__( self, other ):
+        g = igraph.Graph( directed=True )
+        g1 = self.g.copy()
+        g2 = other.g.copy()
+        names_s = self._getSharedNames( g1, g2 )
+        # add non-deterministic epsilon transitions
+        self._epsilonInsert( g1, names_s )
+        self._epsilonInsert( g2, names_s )
+        mod = self._foldPreprocess( g, g1, g2 )
+        self._fold( g, g1, g2, mod )
+        a = DleAutomata( g, ( self.debug or other.debug ) )
+        a._foldPostprocess()
+        return a
+
+
+class DlvAutomata( _DlAutomata ):
+    """Automata class with deadlock extension for synchronous communication,
+    adding epsilon tarnsitions from conflicting states to a deadlock state"""
+    def __mul__( self, other ):
+        g = igraph.Graph( directed=True )
+        g1 = self.g.copy()
+        g2 = other.g.copy()
+        names_s = self._getSharedNames( g1, g2 )
+        mod = self._foldPreprocess( g, g1, g2 )
+        self._foldAddDlv( g, g1, g2, mod )
+        self._fold( g, g1, g2, mod )
+        a = DlvAutomata( g, ( self.debug or other.debug ) )
+        a._foldPostprocess()
+        return a
+
+
+class StreamDleAutomata( _StreamDlAutomata ):
+    """Automata class with deadlock extension for buffered communication,
+    introducing epsilon tarnsitions on 'non-deterministic' protocol states"""
+    def __mul__( self, other ):
+        g = igraph.Graph( directed=True )
+        g1 = self.g.copy()
+        g2 = other.g.copy()
+        names_s = self._getSharedNames( g1, g2 )
+        # add non-deterministic epsilon transitions on shared names
+        self._epsilonInsert( g1, names_s )
+        self._epsilonInsert( g2, names_s )
+        # add queue semantics on shared outputs
+        g1 = self._addQueueSemantics( g1, names_s )
+        g2 = self._addQueueSemantics( g2, names_s )
+        # folding
+        mod = self._foldPreprocess( g, g1, g2 )
+        self._fold( g, g1, g2, mod )
+        a = StreamDleAutomata( g, ( self.debug or other.debug ) )
+        a._foldPostprocess()
+        return a
+
+
+class StreamDlvAutomata( _StreamDlAutomata ):
+    """Automata class with deadlock extension for buffered communication,
+    adding epsilon tarnsitions from conflicting states to a deadlock state"""
+    def __mul__( self, other ):
+        g = igraph.Graph( directed=True )
+        g1 = self.g.copy()
+        g2 = other.g.copy()
+        names_s = self._getSharedNames( g1, g2 )
+        # add queue semantics on shared outputs
+        g1 = self._addQueueSemantics( g1, names_s )
+        g2 = self._addQueueSemantics( g2, names_s )
+        # folding
+        mod = self._foldPreprocess( g, g1, g2 )
+        self._foldAddDlv( g, g1, g2, mod )
+        self._fold( g, g1, g2, mod )
+        a = StreamDlvAutomata( g, ( self.debug or other.debug ) )
+        a._foldPostprocess()
+        return a

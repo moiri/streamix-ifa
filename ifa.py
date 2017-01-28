@@ -16,8 +16,11 @@ parser = argparse.ArgumentParser('This script performs the folding operation on 
 parser.add_argument( '-f', metavar="FORMAT", dest='format', choices=['gml', 'json'], default='gml', help='set the format of the input graph (default: gml)' )
 parser.add_argument( '-j', metavar="TOPO", dest='j_topo', choices=['linear', 'circle', 'streamix'], default='circle', help='set the topology of json input graph (default: circle)' )
 parser.add_argument( '-a', metavar="AUTOMATA", dest='automata', choices=['sync', 'buf'], default='sync', help='set the automata type (default: sync)' )
+parser.add_argument( '-d', metavar="DEADLOCK", dest='dl', choices=['eps', 'vdl'], default='eps', help='set the deadlock detection algorithm (default: eps)' )
 parser.add_argument( '-u', '--unreachable', action='store_true', help='show graph with unreachable states after folding operation' )
 parser.add_argument( '-s', '--step', action='store_true', help='show all intermediate interface automata' )
+parser.add_argument( '-p', '--plot', action='store_true', help='plot the final graph' )
+parser.add_argument( '-b', '--bool', action='store_true', help='print a boolean instead of and error message' )
 parser.add_argument( 'infiles', nargs='+', metavar="INFILE" )
 args = parser.parse_args()
 
@@ -30,7 +33,8 @@ def main():
         a = ifaFoldAll( args.infiles, gml2igraph )
 
     # a.plot( layout="star" )
-    a.plot()
+    if args.plot:
+        a.plot()
 
 def gml2igraph( gml ):
     g = igraph.load( gml, format="gml" )
@@ -139,13 +143,20 @@ def ifaCreateGraphLinear( v_cnt ):
 
 def selectAutomata( g, debug=False ):
     if args.automata == 'sync':
-        return sa.DlAutomata( g, debug )
+        if args.dl == 'eps':
+            return sa.DleAutomata( g, debug )
+        elif args.dl == 'vdl':
+            return sa.DlvAutomata( g, debug )
     elif args.automata == 'buf':
-        return sa.StreamDlAutomata( g, debug )
+        if args.dl == 'eps':
+            return sa.StreamDleAutomata( g, debug )
+        elif args.dl == 'vdl':
+            return sa.StreamDlvAutomata( g, debug )
 
 def ifaFoldAll( ifas, cb_parse ):
     """create the product of a list of ifas"""
     a1 = None
+    res = False
     for ifa in ifas:
         if a1 is None:
             a1 = selectAutomata( cb_parse( ifa ), args.unreachable )
@@ -157,9 +168,14 @@ def ifaFoldAll( ifas, cb_parse ):
             a2.plot()
         af = a1 * a2
         if af.isDeadlocking():
-            print "Error: sytem is potentially deadlocking at " + a1.name \
-                    + " and " + a2.name
+            res = True
+            if not args.bool:
+                print "Error: sytem is potentially deadlocking at " + a1.name \
+                        + " and " + a2.name
+            break
         a1 = af
+
+    if args.bool: print res
 
     return a1
 
