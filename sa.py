@@ -378,11 +378,11 @@ class StreamDleAutomata( _StreamDlAutomata ):
         names_s = self._getSharedNames( g1, g2 )
         # self.plot(g1)
         # self.plot(g2)
+        # self.plot(g1)
+        # self.plot(g2)
         # add non-deterministic epsilon transitions on shared names
         self._epsilonInsert( g1, names_s )
         self._epsilonInsert( g2, names_s )
-        # self.plot(g1)
-        # self.plot(g2)
         # add queue semantics on shared outputs
         g1 = self._addQueueSemantics( g1, names_s )
         g2 = self._addQueueSemantics( g2, names_s )
@@ -399,6 +399,45 @@ class StreamDleAutomata( _StreamDlAutomata ):
                 ( self.step or other.step ) )
         a._foldPostprocess()
         return a
+
+    def _addQueueSemantics( self, g_in, names_s ):
+        e_buf = []
+        gfinal = None
+        g_in = g_in.copy()
+        for e in g_in.es( mode='!' ):
+            if e["name"] in names_s and e["name"] not in e_buf:
+                e_buf.append( e["name"] )
+
+        g_buf_init = igraph.Graph( 2, directed=True )
+        g_buf_init["name"] = "buf"
+        g_buf_init.vs["init"] = False
+        g_buf_init.vs["end"] = False
+        g_buf_init.vs["reach"] = True
+        g_buf_init.vs["dl"] = False
+        g_buf_init.vs( 0 )["init"] = True
+        g_buf_init.vs( 0 )["end"] = True
+        q_prefix = "_queue_"
+        a_in = DleAutomata( g_in )
+
+        for name in e_buf:
+            q_name = q_prefix + name
+            g_buf = g_buf_init.copy()
+            g_buf.add_edge( 0, 1, name=name, mode='?', weight=1 )
+            g_buf.add_edge( 1, 0, name=q_name, mode='!', weight=1 )
+            a_buf = DleAutomata( g_buf )
+            # self.plot( a_in.g )
+            # self.plot( a_buf.g )
+            a_in = a_in * a_buf
+            # self.plot( a_in.g )
+
+        for name in e_buf:
+            q_name = q_prefix + name
+            for e in a_in.g.es( name=q_name ):
+                e["name"] = name
+
+        # self.plot( a_in.g )
+
+        return a_in.g
 
 
 class StreamDlvAutomata( _StreamDlAutomata ):
