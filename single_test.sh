@@ -34,6 +34,7 @@ EOF
 }
 
 RED='\033[0;31m'
+GREEN='\033[0;32m'
 NC='\033[0m'
 f="gml"
 j="circle"
@@ -78,7 +79,7 @@ if [ -z "$infile" ] ; then
 fi
 
 failed="  => ${RED}failed${NC}:"
-success="  => ${NC}success${NC}"
+success="  => ${GREEN}success${NC}"
 cmd="./ifa.py -b -f $f -j $j -a sync -d eps $infile"
 out="$($cmd)"
 if [ "$out" == "$ds" ]; then
@@ -115,17 +116,17 @@ else
     echo -e "$failed expected '$db' got '$out'"
 fi
 
-cmd="./ifa.py -b -f $f -j $j -a buf -d vdl $infile"
-out="$($cmd)"
-if [ "$out" == "$db" ]; then
-    if [ "$v" = true ] ; then
-        echo $cmd
-        echo -e "$success"
-    fi
-else
-    echo $cmd
-    echo -e "$failed expected '$db' got '$out'"
-fi
+# cmd="./ifa.py -b -f $f -j $j -a buf -d vdl $infile"
+# out="$($cmd)"
+# if [ "$out" == "$db" ]; then
+#     if [ "$v" = true ] ; then
+#         echo $cmd
+#         echo -e "$success"
+#     fi
+# else
+#     echo $cmd
+#     echo -e "$failed expected '$db' got '$out'"
+# fi
 
 if [ "$v" = true ] ; then
     echo
