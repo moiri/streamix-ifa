@@ -26,6 +26,8 @@ args = parser.parse_args()
 
 def main():
     """main program entry point"""
+    if args.unreachable: args.step = True
+    if args.step: args.plot = False
     if args.format == 'json':
         j_ifas = json.load( open( args.infiles[0], 'r' ) )
         a = ifaFoldAll( j_ifas, json2igraph )
@@ -40,13 +42,17 @@ def gml2igraph( gml ):
     g = igraph.load( gml, format="gml" )
     g["name"] = g.vs[0]["name"]
     g.vs[0].delete()
+    del g.vs['id']
+    del g.vs['name']
     g.vs['reach'] = True
     g.es['weight'] = 1
     for v in g.vs:
         if not v['init']:
             v['init'] = False
+        else: v['init'] = True
         if not v['end']:
             v['end'] = False
+        else: v['end'] = True
     for e in g.es:
         e['name'] = e['label'][0:-1]
         e['mode'] = e['label'][-1:]
@@ -167,12 +173,16 @@ def ifaFoldAll( ifas, cb_parse ):
             a1.plot()
             a2.plot()
         af = a1 * a2
+        if args.step:
+            af.plot()
         if af.isDeadlocking():
             res = True
+            if args.bool:
+                print res
             if not args.bool:
                 print "Error: sytem is potentially deadlocking at " + a1.name \
                         + " and " + a2.name
-            break
+            return af
         a1 = af
 
     if args.bool: print res
