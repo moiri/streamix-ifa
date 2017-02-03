@@ -3,13 +3,14 @@ import igraph
 class _Automata( object ):
     """Base Automata class with basic folding operation"""
 
-    def __init__( self, g, debug=False ):
+    def __init__( self, g, unreachable=False, step=False ):
         self.name = g["name"]
         self.g = g
-        self.debug = debug
+        self.unreachable = unreachable
+        self.step = step
 
-    def _addEpsilon( self, g, src, dst ):
-        g.add_edge( src, dst, name="eps", mode=';', weight=0 )
+    def _addEpsilon( self, g, src, dst, name="eps" ):
+        g.add_edge( src, dst, name=name, mode=';', weight=0 )
 
     def _fold( self, g, g1, g2, mod ):
         """fold two graphs together"""
@@ -24,6 +25,8 @@ class _Automata( object ):
                     src = self._foldGetVertexId( mod, act1.source, act2.source )
                     dst = self._foldGetVertexId( mod, act1.target, act2.target )
                     self._addEpsilon( g, src, dst )
+                    # g.add_edge( src, dst, name=act1['name'], mode=';',
+                    #         weight=0 )
                     e_del1.append( act1 )
                     e_del2.append( act2 )
         # self.plot( g )
@@ -54,17 +57,20 @@ class _Automata( object ):
         """calculate the index of the folded state"""
         return mod * q + r
 
-    def _foldPostprocess( self ):
+    def _foldPostprocess( self, g=None, unreachable=False ):
+        if g is None:
+            g = self.g
+            unreachable = self.unreachable
         """operations after folding"""
         # mark unreachable states
-        g_init = self.g.vs.find( init=True ).index
-        for v in self.g.vs.select( init=False ):
-            if self.g.adhesion( g_init, v.index ) == 0:
+        g_init = g.vs.find( init=True ).index
+        for v in g.vs.select( init=False ):
+            if g.adhesion( g_init, v.index ) == 0:
                 v['reach'] = False
-        if self.debug:
-            self.plot()
+        if unreachable:
+            self.plot( g )
         # remove unreachable
-        self.g.delete_vertices( self.g.vs.select( reach=False ) )
+        g.delete_vertices( g.vs.select( reach=False ) )
 
     def _foldPreprocess( self, g, g1, g2 ):
         """operations before folding"""
@@ -109,7 +115,24 @@ class _Automata( object ):
         for v in range( idx + 1, len( v_new ) ):
             v_new[v] -= 1
         # print v_new
-        g.contract_vertices( v_new, combine_attrs="sum" )
+        g.contract_vertices( v_new, combine_attrs=dict(
+            reach=self._combine_attrs_and,
+            dl=self._combine_attrs_or,
+            end=self._combine_attrs_or,
+            init=self._combine_attrs_or,
+            ) )
+
+    def _combine_attrs_and( self, attrs ):
+        res = True
+        for attr in attrs:
+            res = res and attr
+        return res
+
+    def _combine_attrs_or( self, attrs ):
+        res = False
+        for attr in attrs:
+            res = res or attr
+        return res
 
     def _plotInit( self, g ):
         """set the colors of the graph vertices and the lables of the edges
@@ -140,21 +163,24 @@ class _DlAutomata( _Automata ):
     """Base DlAutomata class with deadlock extension for synchronous
     communication"""
 
-    def __init__( self, g, debug=False ):
-        super( _DlAutomata, self ).__init__( g, debug )
+    def __init__( self, g, unreachable=False, step=False ):
+        super( _DlAutomata, self ).__init__( g, unreachable, step )
         self.g.vs['dl'] = False
 
     def _epsilonInsert( self, g, names_s ):
         e_eps = []
-        for v in g.vs( _outdegree_gt=1 ):
+        g.vs['strength'] = g.strength( g.vs, mode="OUT", weights='weight' )
+        for v in g.vs( strength_gt=1 ):
             for e in g.es( g.adjacent( v ) ):
                 if e["name"] in names_s:
                     e_eps.append( e )
 
+        del g.vs['strength']
+
         for e in e_eps:
             v_dst = g.vcount()
             g.add_vertex( reach=True, end=False, init=False, dl=False )
-            self._addEpsilon( g, e.source, v_dst )
+            self._addEpsilon( g, e.source, v_dst, "eps" )
             g.add_edge( v_dst, e.target, name=e["name"], mode=e["mode"], weight=1 )
 
         g.delete_edges( e_eps )
@@ -170,13 +196,16 @@ class _DlAutomata( _Automata ):
                             src = self._foldGetVertexId( mod, e1.source, e2.source )
                             self._addEpsilon( g, src, v_dl )
 
-    def _foldPostprocess( self ):
+    def _foldPostprocess( self, g=None, unreachable=False ):
         """operations after folding"""
-        super( _DlAutomata, self )._foldPostprocess()
+        if g is None:
+            g = self.g
+            unreachable = self.unreachable
+        super( _DlAutomata, self )._foldPostprocess( g )
         # mark deadkocks
-        self.g.vs.select( _outdegree_eq=0, end=False )['dl'] = True
-        self.g.vs.select( _outdegree_eq=0, end=True, init=True )['dl'] = True
-        self._reduce()
+        g.vs.select( _outdegree_eq=0, end=False )['dl'] = True
+        g.vs.select( _outdegree_eq=0, end=True, init=True )['dl'] = True
+        self._reduce( g )
 
     def _foldPreprocess( self, g, g1, g2 ):
         """operations before folding"""
@@ -195,6 +224,7 @@ class _DlAutomata( _Automata ):
         """plot the graph"""
         super( _DlAutomata, self )._plotInit( g )
         g.es.select( weight=0 )['color'] = "green"
+        g.es.select( name="eps_dl" )['color'] = "red"
         for v in g.vs:
             if v.strength( weights="weight" ) == 0:
                 v["color"] = "green"
@@ -203,6 +233,7 @@ class _DlAutomata( _Automata ):
     def _reduce( self, g=None ):
         # reduce epsilons
         if g is None: g = self.g
+        # self.plot( g )
         change = True
         while change:
             change = False
@@ -216,14 +247,13 @@ class _DlAutomata( _Automata ):
                         continue
                     self._mergeVertices( g, e.target, e.source )
                     e_del.append( e )
-                elif( g.degree( e.target, mode="IN" ) == 1 ):
-                    if g.vs[ e.target ]["dl"]: continue
-                    self._mergeVertices( g, e.target, e.source )
-                    e_del.append( e )
+
             if len( e_del ) > 0: change = True
             g.delete_edges( e_del )
 
             change = self._removeMultiple( g )
+
+        # self.plot( g )
 
     def _removeMultiple( self, g ):
         e_del = []
@@ -290,12 +320,13 @@ class _StreamDlAutomata( _DlAutomata ):
             mod = self._foldPreprocess( gfinal, g_in, gf )
             self._fold( gfinal, g_in, gf, mod )
             # self.plot( gfinal )
+            self._foldPostprocess( gfinal )
             for name in e_buf:
                 q_name = q_prefix + name
                 for e in gfinal.es( name=q_name ):
                     e["name"] = name
 
-            self._reduce( gfinal )
+            # self.plot( gfinal )
 
         if gfinal is None: gfinal = g_in
         return gfinal
@@ -314,7 +345,8 @@ class DleAutomata( _DlAutomata ):
         self._epsilonInsert( g2, names_s )
         mod = self._foldPreprocess( g, g1, g2 )
         self._fold( g, g1, g2, mod )
-        a = DleAutomata( g, ( self.debug or other.debug ) )
+        a = DleAutomata( g, ( self.unreachable or other.unreachable ),
+                ( self.step or other.step ) )
         a._foldPostprocess()
         return a
 
@@ -330,7 +362,8 @@ class DlvAutomata( _DlAutomata ):
         mod = self._foldPreprocess( g, g1, g2 )
         self._foldAddDlv( g, g1, g2, mod )
         self._fold( g, g1, g2, mod )
-        a = DlvAutomata( g, ( self.debug or other.debug ) )
+        a = DlvAutomata( g, ( self.unreachable or other.unreachable ),
+                ( self.step or other.step ) )
         a._foldPostprocess()
         return a
 
@@ -343,16 +376,27 @@ class StreamDleAutomata( _StreamDlAutomata ):
         g1 = self.g.copy()
         g2 = other.g.copy()
         names_s = self._getSharedNames( g1, g2 )
+        # self.plot(g1)
+        # self.plot(g2)
         # add non-deterministic epsilon transitions on shared names
         self._epsilonInsert( g1, names_s )
         self._epsilonInsert( g2, names_s )
+        # self.plot(g1)
+        # self.plot(g2)
         # add queue semantics on shared outputs
         g1 = self._addQueueSemantics( g1, names_s )
         g2 = self._addQueueSemantics( g2, names_s )
+        # self.plot(g1)
+        # self.plot(g2)
+        # self._reduce( g1 )
+        # self._reduce( g2 )
+        # self.plot(g1)
+        # self.plot(g2)
         # folding
         mod = self._foldPreprocess( g, g1, g2 )
         self._fold( g, g1, g2, mod )
-        a = StreamDleAutomata( g, ( self.debug or other.debug ) )
+        a = StreamDleAutomata( g, ( self.unreachable or other.unreachable ),
+                ( self.step or other.step ) )
         a._foldPostprocess()
         return a
 
@@ -372,6 +416,7 @@ class StreamDlvAutomata( _StreamDlAutomata ):
         mod = self._foldPreprocess( g, g1, g2 )
         self._foldAddDlv( g, g1, g2, mod )
         self._fold( g, g1, g2, mod )
-        a = StreamDlvAutomata( g, ( self.debug or other.debug ) )
+        a = StreamDlvAutomata( g, ( self.unreachable or other.unreachable ),
+                ( self.step or other.step ) )
         a._foldPostprocess()
         return a
