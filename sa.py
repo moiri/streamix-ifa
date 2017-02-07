@@ -12,6 +12,18 @@ class _Automata( object ):
     def _addEpsilon( self, g, src, dst, name="eps" ):
         g.add_edge( src, dst, name=name, mode=';', weight=0 )
 
+    def _combine_attrs_and( self, attrs ):
+        res = True
+        for attr in attrs:
+            res = res and attr
+        return res
+
+    def _combine_attrs_or( self, attrs ):
+        res = False
+        for attr in attrs:
+            res = res or attr
+        return res
+
     def _fold( self, g, g1, g2, mod ):
         """fold two graphs together"""
         # self.plot( g1 )
@@ -71,6 +83,7 @@ class _Automata( object ):
             self.plot( g )
         # remove unreachable
         g.delete_vertices( g.vs.select( reach=False ) )
+        self._foldReduce( g )
 
     def _foldPreprocess( self, g, g1, g2 ):
         """operations before folding"""
@@ -84,7 +97,41 @@ class _Automata( object ):
             for v2 in g2.vs.select( init=True ):
                 idx = self._foldGetVertexId( mod, v1.index, v2.index )
                 g.vs( idx )['init'] = True
+        # mark end states
+        g.vs['end'] = False
+        for v1 in g1.vs.select( end=True ):
+            for v2 in g2.vs.select( end=True ):
+                idx = self._foldGetVertexId( mod, v1.index, v2.index )
+                g.vs( idx )['end'] = True
         return mod
+
+    def _foldReduce( self, g=None ):
+        # reduce epsilons
+        if g is None: g = self.g
+        # self.plot( g )
+        change = True
+        while change:
+            change = False
+            e_del = []
+            for e in g.es( name="eps" ):
+                if e.is_loop(): continue
+                if( g.degree( e.source, mode="OUT" ) == 1 ):
+                    # only one output and it's an epsilon
+                    if( g.vs[ e.source ]["init"] or g.vs[ e.source ]['end'] ) \
+                            and g.degree( e.target, mode="IN" ) > 1:
+                        continue
+                    self._mergeVertices( g, e.target, e.source )
+                    e_del.append( e )
+                # elif( g.degree( e.target, mode="IN" ) == 1 ):
+                #     self._mergeVertices( g, e.target, e.source )
+                #     e_del.append( e )
+
+            if len( e_del ) > 0: change = True
+            g.delete_edges( e_del )
+
+            change = self._removeMultipleEdges( g )
+
+        # self.plot( g )
 
     def _getSharedNames( self, g1, g2 ):
         names = []
@@ -122,18 +169,6 @@ class _Automata( object ):
             init=self._combine_attrs_or,
             ) )
 
-    def _combine_attrs_and( self, attrs ):
-        res = True
-        for attr in attrs:
-            res = res and attr
-        return res
-
-    def _combine_attrs_or( self, attrs ):
-        res = False
-        for attr in attrs:
-            res = res or attr
-        return res
-
     def _plotInit( self, g ):
         """set the colors of the graph vertices and the lables of the edges
         before drawing
@@ -146,6 +181,22 @@ class _Automata( object ):
         g.es['label'] = [ n + m + "_" + str(w) for n, m, w in zip( g.es['name'],
             g.es['mode'], g.es['weight'] ) ]
         g.vs['label'] = [ v.index for v in g.vs ]
+        g.es.select( weight=0 )['color'] = "green"
+
+    def _removeMultipleEdges( self, g ):
+        e_del = []
+        e_mul = []
+        for e in g.es:
+            et = ( e.source, e.target, e["name"] )
+            if et not in e_mul:
+                e_mul.append( et )
+            else:
+                e_del.append( e )
+
+        change = False
+        if len( e_del ) > 0: change = True
+        g.delete_edges( e_del )
+        return change
 
     def plot( self, g=None, layout="auto" ):
         """plot the graph"""
@@ -172,8 +223,18 @@ class _DlAutomata( _Automata ):
         g.vs['strength'] = g.strength( g.vs, mode="OUT", weights='weight' )
         for v in g.vs( strength_gt=1 ):
             for e in g.es( g.adjacent( v ) ):
-                if e["name"] in names_s:
+                # if e["name"] in names_s:
                     e_eps.append( e )
+        # for v in g.vs( strength_gt=1 ):
+        #     e_ids = g.adjacent( v )
+        #     is_shared = False
+        #     for e in g.es( e_ids ):
+        #         if e["name"] in names_s:
+        #             is_shared = True
+        #             break
+        #     if is_shared:
+        #         for e in g.es( e_ids ):
+        #             e_eps.append( e )
 
         del g.vs['strength']
 
@@ -200,75 +261,27 @@ class _DlAutomata( _Automata ):
         """operations after folding"""
         if g is None:
             g = self.g
-            unreachable = self.unreachable
-        super( _DlAutomata, self )._foldPostprocess( g )
+            unreachable = self.unreachable or unreachable
+        super( _DlAutomata, self )._foldPostprocess( g, unreachable )
         # mark deadkocks
         g.vs.select( _outdegree_eq=0, end=False )['dl'] = True
         g.vs.select( _outdegree_eq=0, end=True, init=True )['dl'] = True
-        self._reduce( g )
 
     def _foldPreprocess( self, g, g1, g2 ):
         """operations before folding"""
         mod = super( _DlAutomata, self )._foldPreprocess( g, g1, g2 )
         g.vs['dl'] = False
-        # mark end states
-        g.vs['end'] = False
-        for v1 in g1.vs.select( end=True ):
-            for v2 in g2.vs.select( end=True ):
-                idx = self._foldGetVertexId( mod, v1.index, v2.index )
-                g.vs( idx )['end'] = True
 
         return mod
 
     def _plotInit( self, g ):
         """plot the graph"""
         super( _DlAutomata, self )._plotInit( g )
-        g.es.select( weight=0 )['color'] = "green"
         g.es.select( name="eps_dl" )['color'] = "red"
         for v in g.vs:
             if v.strength( weights="weight" ) == 0:
                 v["color"] = "green"
         g.vs.select( dl=True )['color'] = "red"
-
-    def _reduce( self, g=None ):
-        # reduce epsilons
-        if g is None: g = self.g
-        # self.plot( g )
-        change = True
-        while change:
-            change = False
-            e_del = []
-            for e in g.es( name="eps" ):
-                if e.is_loop(): continue
-                if( g.degree( e.source, mode="OUT" ) == 1 ):
-                    # only one output and its an epsilon
-                    if( g.vs[ e.source ]["init"] or g.vs[ e.source ]['end'] ) \
-                            and g.degree( e.target, mode="IN" ) > 1:
-                        continue
-                    self._mergeVertices( g, e.target, e.source )
-                    e_del.append( e )
-
-            if len( e_del ) > 0: change = True
-            g.delete_edges( e_del )
-
-            change = self._removeMultiple( g )
-
-        # self.plot( g )
-
-    def _removeMultiple( self, g ):
-        e_del = []
-        e_mul = []
-        for e in g.es:
-            et = ( e.source, e.target, e["name"] )
-            if et not in e_mul:
-                e_mul.append( et )
-            else:
-                e_del.append( e )
-
-        change = False
-        if len( e_del ) > 0: change = True
-        g.delete_edges( e_del )
-        return change
 
     def isDeadlocking( self ):
         """check wheteher automata is deadlocking"""
@@ -332,6 +345,22 @@ class _StreamDlAutomata( _DlAutomata ):
         return gfinal
 
 
+class IfAutomata( _Automata ):
+    """Automata class for synchronous communication"""
+    def __mul__( self, other ):
+        g = igraph.Graph( directed=True )
+        g1 = self.g.copy()
+        g2 = other.g.copy()
+        mod = self._foldPreprocess( g, g1, g2 )
+        self._fold( g, g1, g2, mod )
+        a = IfAutomata( g, ( self.unreachable or other.unreachable ),
+                ( self.step or other.step ) )
+        a._foldPostprocess()
+        return a
+
+    def isDeadlocking( self ): return False
+
+
 class DleAutomata( _DlAutomata ):
     """Automata class with deadlock extension for synchronous communication,
     introducing epsilon tarnsitions on 'non-deterministic' protocol states"""
@@ -343,6 +372,8 @@ class DleAutomata( _DlAutomata ):
         # add non-deterministic epsilon transitions
         self._epsilonInsert( g1, names_s )
         self._epsilonInsert( g2, names_s )
+        # self.plot( g1 )
+        # self.plot( g2 )
         mod = self._foldPreprocess( g, g1, g2 )
         self._fold( g, g1, g2, mod )
         a = DleAutomata( g, ( self.unreachable or other.unreachable ),
@@ -378,15 +409,15 @@ class StreamDleAutomata( _StreamDlAutomata ):
         names_s = self._getSharedNames( g1, g2 )
         # self.plot(g1)
         # self.plot(g2)
-        # self.plot(g1)
-        # self.plot(g2)
-        # add non-deterministic epsilon transitions on shared names
-        self._epsilonInsert( g1, names_s )
-        self._epsilonInsert( g2, names_s )
+        # # add non-deterministic epsilon transitions on shared names
+        # self._epsilonInsert( g1, names_s )
+        # # self.plot(g1)
+        # self._epsilonInsert( g2, names_s )
+        # # self.plot(g2)
         # add queue semantics on shared outputs
         g1 = self._addQueueSemantics( g1, names_s )
-        g2 = self._addQueueSemantics( g2, names_s )
         # self.plot(g1)
+        g2 = self._addQueueSemantics( g2, names_s )
         # self.plot(g2)
         # self._reduce( g1 )
         # self._reduce( g2 )
