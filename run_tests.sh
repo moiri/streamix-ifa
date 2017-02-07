@@ -55,4 +55,8 @@ done
 ./single_test.sh $v -f json -j circle -ds ./test/serial6.json
 ./single_test.sh $v -f json -j circle -ds -db ./test/serial7.json
 ./single_test.sh $v -f gml -ds ./test/serial8_1.gml ./test/serial8_2.gml
+./single_test.sh $v -f gml -ds ./test/serial8b_1.gml ./test/serial8_2.gml
+./single_test.sh $v -f gml -ds ./test/serial8c_1.gml ./test/serial8_2.gml ./test/serial4c_3.gml
 ./single_test.sh $v -f gml -ds -db ./test/serial9_1.gml ./test/serial9_2.gml
+./single_test.sh $v -f gml -ds -db ./test/serial9b_1.gml ./test/serial9_2.gml
+./single_test.sh $v -f gml -ds -db ./test/serial9c_1.gml ./test/serial9_2.gml ./test/serial4c_3.gml
