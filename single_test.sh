@@ -80,7 +80,7 @@ fi
 
 failed="  => ${RED}failed${NC}:"
 success="  => ${GREEN}success${NC}"
-cmd="./ifa.py -b -f $f -j $j -a sync -d eps $infile"
+cmd="./ifa.py -b -f $f -j $j -a sync $infile"
 out="$($cmd)"
 if [ "$out" == "$ds" ]; then
     if [ "$v" = true ] ; then
@@ -92,19 +92,7 @@ else
     echo -e "$failed expected '$ds' got '$out'"
 fi
 
-cmd="./ifa.py -b -f $f -j $j -a sync -d vdl $infile"
-out="$($cmd)"
-if [ "$out" == "$ds" ]; then
-    if [ "$v" = true ] ; then
-        echo $cmd
-        echo -e "$success"
-    fi
-else
-    echo $cmd
-    echo -e "$failed expected '$ds' got '$out'"
-fi
-
-cmd="./ifa.py -b -f $f -j $j -a buf -d eps $infile"
+cmd="./ifa.py -b -f $f -j $j -a buf $infile"
 out="$($cmd)"
 if [ "$out" == "$db" ]; then
     if [ "$v" = true ] ; then
@@ -115,18 +103,6 @@ else
     echo $cmd
     echo -e "$failed expected '$db' got '$out'"
 fi
-
-# cmd="./ifa.py -b -f $f -j $j -a buf -d vdl $infile"
-# out="$($cmd)"
-# if [ "$out" == "$db" ]; then
-#     if [ "$v" = true ] ; then
-#         echo $cmd
-#         echo -e "$success"
-#     fi
-# else
-#     echo $cmd
-#     echo -e "$failed expected '$db' got '$out'"
-# fi
 
 if [ "$v" = true ] ; then
     echo

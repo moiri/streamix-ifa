@@ -251,19 +251,6 @@ class _DlAutomata( _Automata ):
 
         g.delete_edges( e_eps )
 
-    # @deprecated
-    def _foldAddDlv( self, g, g1, g2, mod ):
-        """a deadlock vertice and connecting edges are added"""
-        v_dl = g.vcount()
-        g.add_vertex( reach=True, end=False, init=False, dl=True )
-        for v1 in g1.vs:
-            for v2 in g2.vs:
-                for e1 in g1.es( g1.adjacent( v1 ) ):
-                    for e2 in g2.es( g2.adjacent( v2 ) ):
-                        if not self._isActionShared( e1, e2 ):
-                            src = self._foldGetVertexId( mod, e1.source, e2.source )
-                            self._addEpsilon( g, src, v_dl )
-
     def _foldPostprocess( self, g=None, unreachable=False ):
         """operations after folding"""
         if g is None:
@@ -312,7 +299,7 @@ class IfAutomata( _Automata ):
     def isDeadlocking( self ): return False
 
 
-class DleAutomata( _DlAutomata ):
+class DlAutomata( _DlAutomata ):
     """Automata class with deadlock extension for synchronous communication,
     introducing epsilon tarnsitions on 'non-deterministic' protocol states"""
     def __mul__( self, other ):
@@ -327,31 +314,13 @@ class DleAutomata( _DlAutomata ):
         # self.plot( g2 )
         mod = self._foldPreprocess( g, g1, g2 )
         self._fold( g, g1, g2, mod )
-        a = DleAutomata( g, ( self.unreachable or other.unreachable ),
+        a = DlAutomata( g, ( self.unreachable or other.unreachable ),
                 ( self.step or other.step ) )
         a._foldPostprocess()
         return a
 
 
-# @deprecated
-class DlvAutomata( _DlAutomata ):
-    """Automata class with deadlock extension for synchronous communication,
-    adding epsilon tarnsitions from conflicting states to a deadlock state"""
-    def __mul__( self, other ):
-        g = igraph.Graph( directed=True )
-        g1 = self.g.copy()
-        g2 = other.g.copy()
-        names_s = self._getSharedNames( g1, g2 )
-        mod = self._foldPreprocess( g, g1, g2 )
-        self._foldAddDlv( g, g1, g2, mod )
-        self._fold( g, g1, g2, mod )
-        a = DlvAutomata( g, ( self.unreachable or other.unreachable ),
-                ( self.step or other.step ) )
-        a._foldPostprocess()
-        return a
-
-
-class StreamDleAutomata( _DlAutomata ):
+class StreamDlAutomata( _DlAutomata ):
     """Automata class with deadlock extension for buffered communication,
     introducing epsilon tarnsitions on 'non-deterministic' protocol states"""
     def __mul__( self, other ):
@@ -374,7 +343,7 @@ class StreamDleAutomata( _DlAutomata ):
         # folding
         mod = self._foldPreprocess( g, g1, g2 )
         self._fold( g, g1, g2, mod )
-        a = StreamDleAutomata( g, ( self.unreachable or other.unreachable ),
+        a = StreamDlAutomata( g, ( self.unreachable or other.unreachable ),
                 ( self.step or other.step ) )
         a._foldPostprocess()
         return a
@@ -418,25 +387,3 @@ class StreamDleAutomata( _DlAutomata ):
         # self.plot( a_in.g )
 
         return a_in.g
-
-
-# @deprecated
-class StreamDlvAutomata( _DlAutomata ):
-    """Automata class with deadlock extension for buffered communication,
-    adding epsilon tarnsitions from conflicting states to a deadlock state"""
-    def __mul__( self, other ):
-        g = igraph.Graph( directed=True )
-        g1 = self.g.copy()
-        g2 = other.g.copy()
-        names_s = self._getSharedNames( g1, g2 )
-        # add queue semantics on shared outputs
-        g1 = self._addQueueSemantics( g1, names_s )
-        g2 = self._addQueueSemantics( g2, names_s )
-        # folding
-        mod = self._foldPreprocess( g, g1, g2 )
-        self._foldAddDlv( g, g1, g2, mod )
-        self._fold( g, g1, g2, mod )
-        a = StreamDlvAutomata( g, ( self.unreachable or other.unreachable ),
-                ( self.step or other.step ) )
-        a._foldPostprocess()
-        return a
