@@ -1,0 +1,14 @@
+[
+    {
+        "box": "A",
+        "ports": ["b!", "a?", "c!"]
+    },
+    {
+        "box": "Bufb",
+        "ports": ["b?", "bq!"]
+    },
+    {
+        "box": "Bufc",
+        "ports": ["c?", "cq!"]
+    }
+]
