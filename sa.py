@@ -221,25 +221,23 @@ class _Automata( object ):
         del g.es['label']
         del g.vs['label']
 
+
 class _DlAutomata( _Automata ):
     """Base DlAutomata class with deadlock extension for synchronous
     communication"""
 
-    def __init__( self, g, unreachable=False, step=False ):
+    def __init__( self, g, unreachable=False, step=False, atomic=True ):
         super( _DlAutomata, self ).__init__( g, unreachable, step )
         self.g.vs['dl'] = False
+        if atomic: self._epsilonInsert( self.g )
 
-    def _epsilonInsert( self, g, names_s ):
+    def _epsilonInsert( self, g ):
         """inster epsilon tarnsitions on non-deterministics shared actions"""
         e_eps = []
         g.vs['strength'] = g.strength( g.vs, mode="OUT", weights='weight' )
         for v in g.vs( strength_gt=1 ):
-            e_shared = []
             for e in g.es( g.adjacent( v ) ):
-                if e["name"] in names_s:
-                    e_shared.append( e )
-            if len( e_shared ) > 1:
-                e_eps += e_shared
+                e_eps.append( e )
 
         del g.vs['strength']
 
@@ -247,7 +245,8 @@ class _DlAutomata( _Automata ):
             v_dst = g.vcount()
             g.add_vertex( reach=True, end=False, init=False, dl=False )
             self._addEpsilon( g, e.source, v_dst, "eps" )
-            g.add_edge( v_dst, e.target, name=e["name"], mode=e["mode"], weight=1 )
+            g.add_edge( v_dst, e.target, name=e["name"], mode=e["mode"],
+                    weight=1 )
 
         g.delete_edges( e_eps )
 
@@ -306,16 +305,10 @@ class DlAutomata( _DlAutomata ):
         g = igraph.Graph( directed=True )
         g1 = self.g.copy()
         g2 = other.g.copy()
-        names_s = self._getSharedNames( g1, g2 )
-        # add non-deterministic epsilon transitions
-        self._epsilonInsert( g1, names_s )
-        self._epsilonInsert( g2, names_s )
-        # self.plot( g1 )
-        # self.plot( g2 )
         mod = self._foldPreprocess( g, g1, g2 )
         self._fold( g, g1, g2, mod )
         a = DlAutomata( g, ( self.unreachable or other.unreachable ),
-                ( self.step or other.step ) )
+                ( self.step or other.step ), False )
         a._foldPostprocess()
         return a
 
@@ -323,38 +316,28 @@ class DlAutomata( _DlAutomata ):
 class StreamDlAutomata( _DlAutomata ):
     """Automata class with deadlock extension for buffered communication,
     introducing epsilon tarnsitions on 'non-deterministic' protocol states"""
+    def __init__( self, g, unreachable=False, step=False, atomic=True ):
+        super( StreamDlAutomata, self ).__init__( g, unreachable, step, atomic )
+        if atomic: self.g = self._addQueueSemantics( self.g )
+
     def __mul__( self, other ):
         g = igraph.Graph( directed=True )
         g1 = self.g.copy()
         g2 = other.g.copy()
-        names_s = self._getSharedNames( g1, g2 )
-        # self.plot(g1)
-        # self.plot(g2)
-        # add non-deterministic epsilon transitions on shared names
-        self._epsilonInsert( g1, names_s )
-        # self.plot(g1)
-        self._epsilonInsert( g2, names_s )
-        # self.plot(g2)
-        # add queue semantics on shared outputs
-        g1 = self._addQueueSemantics( g1, names_s )
-        # self.plot(g1)
-        g2 = self._addQueueSemantics( g2, names_s )
-        # self.plot(g2)
-        # folding
         mod = self._foldPreprocess( g, g1, g2 )
         self._fold( g, g1, g2, mod )
         a = StreamDlAutomata( g, ( self.unreachable or other.unreachable ),
-                ( self.step or other.step ) )
+                ( self.step or other.step ), False )
         a._foldPostprocess()
         return a
 
-    def _addQueueSemantics( self, g_in, names_s ):
+    def _addQueueSemantics( self, g_in ):
         """fold each output with a automaton modeling a buffer"""
         e_buf = []
         gfinal = None
         g_in = g_in.copy()
         for e in g_in.es( mode='!' ):
-            if e["name"] in names_s and e["name"] not in e_buf:
+            if e["name"] not in e_buf:
                 e_buf.append( e["name"] )
 
         g_buf_init = igraph.Graph( 2, directed=True )
@@ -366,14 +349,14 @@ class StreamDlAutomata( _DlAutomata ):
         g_buf_init.vs( 0 )["init"] = True
         g_buf_init.vs( 0 )["end"] = True
         q_prefix = "_queue_"
-        a_in = IfAutomata( g_in )
+        a_in = DlAutomata( g_in )
 
         for name in e_buf:
             q_name = q_prefix + name
             g_buf = g_buf_init.copy()
             g_buf.add_edge( 0, 1, name=name, mode='?', weight=1 )
             g_buf.add_edge( 1, 0, name=q_name, mode='!', weight=1 )
-            a_buf = IfAutomata( g_buf )
+            a_buf = DlAutomata( g_buf )
             # self.plot( a_in.g )
             # self.plot( a_buf.g )
             a_in = a_in * a_buf
