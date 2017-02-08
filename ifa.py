@@ -25,6 +25,7 @@ args = parser.parse_args()
 
 def main():
     """main program entry point"""
+    if args.automata == 'ifa': args.bool = False
     if args.unreachable: args.step = True
     if args.step: args.plot = False
     if args.format == 'json':
@@ -147,12 +148,12 @@ def ifaCreateGraphLinear( v_cnt ):
     return g
 
 def selectAutomata( g, debug=False ):
-    if args.automata == 'sync':
+    if args.automata == 'ifa':
+        return sa.Automata( g, debug )
+    elif args.automata == 'sync':
         return sa.DlAutomata( g, debug )
     elif args.automata == 'buf':
         return sa.StreamDlAutomata( g, debug )
-    elif args.automata == 'ifa':
-        return sa.IfAutomata( g, debug )
 
 def ifaFoldAll( ifas, cb_parse ):
     """create the product of a list of ifas"""
@@ -170,7 +171,7 @@ def ifaFoldAll( ifas, cb_parse ):
         af = a1 * a2
         if args.step:
             af.plot()
-        if af.isDeadlocking():
+        if args.automata != 'ifa' and af.isDeadlocking():
             res = True
             if args.bool:
                 print res

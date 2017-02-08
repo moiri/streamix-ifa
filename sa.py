@@ -1,13 +1,24 @@
 import igraph
 
-class _Automata( object ):
-    """Base Automata class with basic folding operation"""
+class Automata( object ):
+    """Automata class with basic folding operation"""
 
-    def __init__( self, g, unreachable=False, step=False ):
+    def __init__( self, g, unreachable=False, step=False, atomic=True ):
         self.name = g["name"]
         self.g = g
         self.unreachable = unreachable
         self.step = step
+
+    def __mul__( self, other ):
+        g = igraph.Graph( directed=True )
+        g1 = self.g.copy()
+        g2 = other.g.copy()
+        mod = self._foldPreprocess( g, g1, g2 )
+        self._fold( g, g1, g2, mod )
+        a = self.__class__( g, ( self.unreachable or other.unreachable ),
+                ( self.step or other.step ), False )
+        a._foldPostprocess()
+        return a
 
     def _addEpsilon( self, g, src, dst, name="eps" ):
         """add a single epsilon transition"""
@@ -222,12 +233,11 @@ class _Automata( object ):
         del g.vs['label']
 
 
-class _DlAutomata( _Automata ):
-    """Base DlAutomata class with deadlock extension for synchronous
-    communication"""
+class DlAutomata( Automata ):
+    """Automata class with deadlock extension for synchronous communication"""
 
     def __init__( self, g, unreachable=False, step=False, atomic=True ):
-        super( _DlAutomata, self ).__init__( g, unreachable, step )
+        super( DlAutomata, self ).__init__( g, unreachable, step, atomic )
         self.g.vs['dl'] = False
         if atomic: self._epsilonInsert( self.g )
 
@@ -253,21 +263,21 @@ class _DlAutomata( _Automata ):
         if g is None:
             g = self.g
             unreachable = self.unreachable or unreachable
-        super( _DlAutomata, self )._foldPostprocess( g, unreachable )
+        super( DlAutomata, self )._foldPostprocess( g, unreachable )
         # mark deadkocks
         g.vs.select( _outdegree_eq=0, end=False )['dl'] = True
         g.vs.select( _outdegree_eq=0, end=True, init=True )['dl'] = True
 
     def _foldPreprocess( self, g, g1, g2 ):
         """operations before folding"""
-        mod = super( _DlAutomata, self )._foldPreprocess( g, g1, g2 )
+        mod = super( DlAutomata, self )._foldPreprocess( g, g1, g2 )
         g.vs['dl'] = False
 
         return mod
 
     def _plotInit( self, g ):
         """plot the graph"""
-        super( _DlAutomata, self )._plotInit( g )
+        super( DlAutomata, self )._plotInit( g )
         g.es.select( name="eps_dl" )['color'] = "red"
         for v in g.vs:
             if v.strength( weights="weight" ) == 0:
@@ -280,54 +290,12 @@ class _DlAutomata( _Automata ):
         return ( vdl > 0 )
 
 
-class IfAutomata( _Automata ):
-    """Automata class for synchronous communication"""
-    def __mul__( self, other ):
-        g = igraph.Graph( directed=True )
-        g1 = self.g.copy()
-        g2 = other.g.copy()
-        mod = self._foldPreprocess( g, g1, g2 )
-        self._fold( g, g1, g2, mod )
-        a = IfAutomata( g, ( self.unreachable or other.unreachable ),
-                ( self.step or other.step ) )
-        a._foldPostprocess()
-        return a
-
-    def isDeadlocking( self ): return False
-
-
-class DlAutomata( _DlAutomata ):
-    """Automata class with deadlock extension for synchronous communication,
-    introducing epsilon tarnsitions on 'non-deterministic' protocol states"""
-    def __mul__( self, other ):
-        g = igraph.Graph( directed=True )
-        g1 = self.g.copy()
-        g2 = other.g.copy()
-        mod = self._foldPreprocess( g, g1, g2 )
-        self._fold( g, g1, g2, mod )
-        a = DlAutomata( g, ( self.unreachable or other.unreachable ),
-                ( self.step or other.step ), False )
-        a._foldPostprocess()
-        return a
-
-
-class StreamDlAutomata( _DlAutomata ):
+class StreamDlAutomata( DlAutomata ):
     """Automata class with deadlock extension for buffered communication,
     introducing epsilon tarnsitions on 'non-deterministic' protocol states"""
     def __init__( self, g, unreachable=False, step=False, atomic=True ):
         super( StreamDlAutomata, self ).__init__( g, unreachable, step, atomic )
         if atomic: self.g = self._addQueueSemantics( self.g )
-
-    def __mul__( self, other ):
-        g = igraph.Graph( directed=True )
-        g1 = self.g.copy()
-        g2 = other.g.copy()
-        mod = self._foldPreprocess( g, g1, g2 )
-        self._fold( g, g1, g2, mod )
-        a = StreamDlAutomata( g, ( self.unreachable or other.unreachable ),
-                ( self.step or other.step ), False )
-        a._foldPostprocess()
-        return a
 
     def _addQueueSemantics( self, g_in ):
         """fold each output with a automaton modeling a buffer"""
