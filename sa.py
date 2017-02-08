@@ -232,13 +232,11 @@ class _DlAutomata( _Automata ):
         if atomic: self._epsilonInsert( self.g )
 
     def _epsilonInsert( self, g ):
-        """inster epsilon tarnsitions on non-deterministics shared actions"""
+        """insert epsilon tarnsitions on non-deterministics shared actions"""
         e_eps = []
         g.vs['strength'] = g.strength( g.vs, mode="OUT", weights='weight' )
         for v in g.vs( strength_gt=1 ):
-            for e in g.es( g.adjacent( v ) ):
-                e_eps.append( e )
-
+            e_eps += g.es( g.adjacent( v ) )
         del g.vs['strength']
 
         for e in e_eps:
