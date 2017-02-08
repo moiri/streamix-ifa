@@ -197,8 +197,7 @@ class Automata( object ):
         g.vs.select( init=False, end=True )['shape'] = "triangle"
         g.vs.select( init=True, end=False )['shape'] = "diamond"
         g.vs.select( init=True, end=True )['shape'] = "diamond"
-        g.es['label'] = [ n + m + "_" + str(w) for n, m, w in zip( g.es['name'],
-            g.es['mode'], g.es['weight'] ) ]
+        g.es['label'] = [ n + m for n, m in zip( g.es['name'], g.es['mode'] ) ]
         g.vs['label'] = [ v.index for v in g.vs ]
         g.es.select( weight=0 )['color'] = "green"
 
