@@ -51,14 +51,14 @@ done
 ./single_test.sh $v -f gml -ds ./test/serial4b_1.gml ./test/serial4_2.gml
 ./single_test.sh $v -f gml -ds ./test/serial4c_1.gml ./test/serial4_2.gml
 ./single_test.sh $v -f gml -ds ./test/serial4c_1.gml ./test/serial4_2.gml ./test/serial4c_3.gml
-./single_test.sh $v -f json -j circle ./test/serial5.json
-./single_test.sh $v -f json -j circle -ds ./test/serial6.json
-./single_test.sh $v -f json -j circle -ds -db ./test/serial7.json
-./single_test.sh $v -f gml -ds ./test/serial8_1.gml ./test/serial8_2.gml
-./single_test.sh $v -f gml -ds ./test/serial8b_1.gml ./test/serial8_2.gml
-./single_test.sh $v -f gml -ds ./test/serial8c_1.gml ./test/serial8_2.gml ./test/serial4c_3.gml
-./single_test.sh $v -f gml -ds -db ./test/serial9_1.gml ./test/serial9_2.gml
-./single_test.sh $v -f gml -ds -db ./test/serial9b_1.gml ./test/serial9_2.gml
-./single_test.sh $v -f gml -ds -db ./test/serial9c_1.gml ./test/serial9_2.gml ./test/serial4c_3.gml
-./single_test.sh $v -f json -j circle ./test/serial10.json
-./single_test.sh $v -f json -j circle -ds -db ./test/serial11.json
+./single_test.sh $v -f json -j circle ./test/feedback1.json
+./single_test.sh $v -f json -j circle -ds ./test/feedback2.json
+./single_test.sh $v -f json -j circle -ds -db ./test/feedback3.json
+./single_test.sh $v -f gml -ds ./test/feedback4_1.gml ./test/feedback4_2.gml
+./single_test.sh $v -f gml -ds ./test/feedback4b_1.gml ./test/feedback4_2.gml
+./single_test.sh $v -f gml -ds ./test/feedback4c_1.gml ./test/feedback4_2.gml ./test/serial4c_3.gml
+./single_test.sh $v -f gml -ds -db ./test/feedback5_1.gml ./test/feedback5_2.gml
+./single_test.sh $v -f gml -ds -db ./test/feedback5b_1.gml ./test/feedback5_2.gml
+./single_test.sh $v -f gml -ds -db ./test/feedback5c_1.gml ./test/feedback5_2.gml ./test/serial4c_3.gml
+./single_test.sh $v -f json -j circle ./test/feedback6.json
+./single_test.sh $v -f json -j circle -ds -db ./test/feedback7.json
