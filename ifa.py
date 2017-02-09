@@ -25,7 +25,6 @@ args = parser.parse_args()
 
 def main():
     """main program entry point"""
-    if args.automata == 'ifa': args.bool = False
     if args.unreachable: args.step = True
     if args.step: args.plot = False
     if args.format == 'json':
@@ -171,7 +170,7 @@ def ifaFoldAll( ifas, cb_parse ):
         af = a1 * a2
         if args.step:
             af.plot()
-        if args.automata != 'ifa' and af.isDeadlocking():
+        if af.isDeadlocking():
             res = True
             if args.bool:
                 print res

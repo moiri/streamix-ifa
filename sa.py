@@ -3,9 +3,10 @@ import igraph
 class Automata( object ):
     """Automata class with basic folding operation"""
 
-    def __init__( self, g, unreachable=False, step=False, atomic=True ):
+    def __init__( self, g, unreachable=False, step=False ):
         self.name = g["name"]
         self.g = g
+        self.g.vs['dl'] = False
         self.unreachable = unreachable
         self.step = step
 
@@ -15,8 +16,8 @@ class Automata( object ):
         g2 = other.g.copy()
         mod = self._foldPreprocess( g, g1, g2 )
         self._fold( g, g1, g2, mod )
-        a = self.__class__( g, ( self.unreachable or other.unreachable ),
-                ( self.step or other.step ), False )
+        a = Automata( g, ( self.unreachable or other.unreachable ),
+                ( self.step or other.step ) )
         a._foldPostprocess()
         return a
 
@@ -98,6 +99,9 @@ class Automata( object ):
             self.plot( g )
         # remove unreachable
         g.delete_vertices( g.vs.select( reach=False ) )
+        # mark deadkocks
+        g.vs.select( _outdegree_eq=0, end=False )['dl'] = True
+        g.vs.select( _outdegree_eq=0, end=True, init=True )['dl'] = True
         self._foldReduce( g )
 
     def _foldPreprocess( self, g, g1, g2 ):
@@ -105,6 +109,7 @@ class Automata( object ):
         g["name"] = "fold"
         g.add_vertices( g1.vcount() * g2.vcount() )
         g.vs['reach'] = True
+        g.vs['dl'] = False
         # mark initial states
         g.vs['init'] = False
         mod = g2.vcount()
@@ -127,28 +132,25 @@ class Automata( object ):
         # self.plot( g )
         change = True
         while change:
-            change = False
+            change = self._removeMultipleEdges( g )
             e_del = []
             for e in g.es( name="eps" ):
-                if e.is_loop(): continue
-                if( g.degree( e.source, mode="OUT" ) == 1 ):
+                # if e.is_loop(): continue
+                if e.is_loop() and not g.vs[e.source]['init']:
+                    e_del.append( e )
+                elif( g.degree( e.source, mode="OUT" ) == 1 ):
                     # only one output and it's an epsilon
                     if( g.vs[ e.source ]["init"] or g.vs[ e.source ]['end'] ) \
                             and g.degree( e.target, mode="IN" ) > 1:
                         continue
                     self._mergeVertices( g, e.target, e.source )
-                    e_del.append( e )
-                # elif( g.degree( e.target, mode="IN" ) == 1 ):
-                #     # only one input and it's an epsilon
-                #     self._mergeVertices( g, e.target, e.source )
-                #     e_del.append( e )
+                    if not ( e.is_loop() and g.vs[e.source]['init'] ):
+                        e_del.append( e )
 
             if len( e_del ) > 0: change = True
             g.delete_edges( e_del )
+            # self.plot( g )
 
-            change = self._removeMultipleEdges( g )
-
-        # self.plot( g )
 
     def _getSharedNames( self, g1, g2 ):
         """collects all shared names of two graphs"""
@@ -200,6 +202,10 @@ class Automata( object ):
         g.es['label'] = [ n + m for n, m in zip( g.es['name'], g.es['mode'] ) ]
         g.vs['label'] = [ v.index for v in g.vs ]
         g.es.select( weight=0 )['color'] = "green"
+        for v in g.vs:
+            if v.strength( weights="weight" ) == 0:
+                v["color"] = "green"
+        g.vs.select( dl=True )['color'] = "red"
 
     def _removeMultipleEdges( self, g ):
         """removes all edges with the same name, the same source vertice and the
@@ -219,6 +225,11 @@ class Automata( object ):
         g.delete_edges( e_del )
         return change
 
+    def isDeadlocking( self ):
+        """check wheteher automata is deadlocking"""
+        vdl = self.g.vs.select( dl=True ).__len__()
+        return ( vdl > 0 )
+
     def plot( self, g=None, layout="auto" ):
         """plot the graph"""
         if g is None:
@@ -235,12 +246,11 @@ class Automata( object ):
 class DlAutomata( Automata ):
     """Automata class with deadlock extension for synchronous communication"""
 
-    def __init__( self, g, unreachable=False, step=False, atomic=True ):
-        super( DlAutomata, self ).__init__( g, unreachable, step, atomic )
-        self.g.vs['dl'] = False
-        if atomic: self._epsilonInsert( self.g )
+    def __init__( self, g, unreachable=False, step=False ):
+        super( DlAutomata, self ).__init__( g, unreachable, step )
+        self._addDlSemantics( self.g )
 
-    def _epsilonInsert( self, g ):
+    def _addDlSemantics( self, g ):
         """insert epsilon tarnsitions on non-deterministics shared actions"""
         e_eps = []
         g.vs['strength'] = g.strength( g.vs, mode="OUT", weights='weight' )
@@ -257,44 +267,14 @@ class DlAutomata( Automata ):
 
         g.delete_edges( e_eps )
 
-    def _foldPostprocess( self, g=None, unreachable=False ):
-        """operations after folding"""
-        if g is None:
-            g = self.g
-            unreachable = self.unreachable or unreachable
-        super( DlAutomata, self )._foldPostprocess( g, unreachable )
-        # mark deadkocks
-        g.vs.select( _outdegree_eq=0, end=False )['dl'] = True
-        g.vs.select( _outdegree_eq=0, end=True, init=True )['dl'] = True
-
-    def _foldPreprocess( self, g, g1, g2 ):
-        """operations before folding"""
-        mod = super( DlAutomata, self )._foldPreprocess( g, g1, g2 )
-        g.vs['dl'] = False
-
-        return mod
-
-    def _plotInit( self, g ):
-        """plot the graph"""
-        super( DlAutomata, self )._plotInit( g )
-        g.es.select( name="eps_dl" )['color'] = "red"
-        for v in g.vs:
-            if v.strength( weights="weight" ) == 0:
-                v["color"] = "green"
-        g.vs.select( dl=True )['color'] = "red"
-
-    def isDeadlocking( self ):
-        """check wheteher automata is deadlocking"""
-        vdl = self.g.vs.select( dl=True ).__len__()
-        return ( vdl > 0 )
-
 
 class StreamDlAutomata( DlAutomata ):
     """Automata class with deadlock extension for buffered communication,
     introducing epsilon tarnsitions on 'non-deterministic' protocol states"""
-    def __init__( self, g, unreachable=False, step=False, atomic=True ):
-        super( StreamDlAutomata, self ).__init__( g, unreachable, step, atomic )
-        if atomic: self.g = self._addQueueSemantics( self.g )
+
+    def __init__( self, g, unreachable=False, step=False ):
+        super( StreamDlAutomata, self ).__init__( g, unreachable, step )
+        self.g = self._addQueueSemantics( self.g )
 
     def _addQueueSemantics( self, g_in ):
         """fold each output with a automaton modeling a buffer"""
