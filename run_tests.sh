@@ -56,6 +56,7 @@ done
 ./single_test.sh $v$p-f gml -ds ./test/serial4b_1.gml ./test/serial4_2.gml
 ./single_test.sh $v$p-f gml -ds ./test/serial4c_1.gml ./test/serial4_2.gml
 ./single_test.sh $v$p-f gml -ds ./test/serial4c_1.gml ./test/serial4_2.gml ./test/serial4c_3.gml
+./single_test.sh $v$p-f json ./test/serial5.json
 ./single_test.sh $v$p-f json ./test/feedback1.json
 ./single_test.sh $v$p-f json -ds ./test/feedback2.json
 ./single_test.sh $v$p-f json -ds -db ./test/feedback3.json
