@@ -23,7 +23,7 @@ Run the ifa script and compare the output to a sulution file
 Options:
 -h, --help          display this usage message and exit
 -f FORMAT           set the format of the input graph (default: gml)
--j TOPO             set the topology of json input graph (default: circle)
+-p                  print final graph
 -v                  verbose
 -ds                 if set sync is deadlocking
 -db                 if set buffer is deadlocking
@@ -37,9 +37,9 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m'
 f="gml"
-j="circle"
 ds="False"
 db="False"
+p=""
 v=false
 infile=""
 while [ $# -gt 0 ] ; do
@@ -53,15 +53,14 @@ while [ $# -gt 0 ] ; do
         -db)
             db="True"
             ;;
+        -p)
+            p=" -p"
+            ;;
         -v)
             v=true
             ;;
         -f)
             f="$2"
-            shift
-            ;;
-        -j)
-            j="$2"
             shift
             ;;
         -*)
@@ -78,32 +77,36 @@ if [ -z "$infile" ] ; then
     usage "Not enough arguments"
 fi
 
-failed="  => ${RED}failed${NC}:"
-success="  => ${GREEN}success${NC}"
-cmd="./ifa.py -b -f $f -j $j -a sync $infile"
-out="$($cmd)"
-if [ "$out" == "$ds" ]; then
-    if [ "$v" = true ] ; then
-        echo $cmd
-        echo -e "$success"
-    fi
-else
-    echo $cmd
-    echo -e "$failed expected '$ds' got '$out'"
+if [ "$f" == "gml" ]; then
+    ja[0]=""
+elif [ "$f" == "json" ]; then
+    ja[0]=" -j circle"
+    ja[1]=" -j linear"
 fi
 
-cmd="./ifa.py -b -f $f -j $j -a buf $infile"
-out="$($cmd)"
-if [ "$out" == "$db" ]; then
-    if [ "$v" = true ] ; then
-        echo $cmd
-        echo -e "$success"
+failed="${RED}failed${NC}:   "
+success="${GREEN}success${NC}:  "
+for j in "${ja[@]}"
+do
+    cmd="./ifa.py -b$p -f $f$j -a sync $infile"
+    out="$($cmd)"
+    if [ "$out" == "$ds" ]; then
+        if [ "$v" = true ] ; then
+            echo -e "$success$cmd"
+        fi
+    else
+        echo -e "$failed$cmd"
+        echo -e "  => expected '$ds' got '$out'"
     fi
-else
-    echo $cmd
-    echo -e "$failed expected '$db' got '$out'"
-fi
 
-if [ "$v" = true ] ; then
-    echo
-fi
+    cmd="./ifa.py -b$p -f $f$j -a buf $infile"
+    out="$($cmd)"
+    if [ "$out" == "$db" ]; then
+        if [ "$v" = true ] ; then
+            echo -e "$success$cmd"
+        fi
+    else
+        echo -e "$failed$cmd"
+        echo -e "  => expected '$db' got '$out'"
+    fi
+done
