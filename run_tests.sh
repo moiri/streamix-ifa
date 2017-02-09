@@ -62,3 +62,5 @@ done
 ./single_test.sh $v -f gml -ds -db ./test/feedback5c_1.gml ./test/feedback5_2.gml ./test/serial4c_3.gml
 ./single_test.sh $v -f json -j circle ./test/feedback6.json
 ./single_test.sh $v -f json -j circle -ds -db ./test/feedback7.json
+./single_test.sh $v -f json -j circle ./test/loop1.json
+./single_test.sh $v -f json -j circle -ds ./test/loop2.json
