@@ -60,3 +60,5 @@ done
 ./single_test.sh $v -f gml -ds -db ./test/serial9_1.gml ./test/serial9_2.gml
 ./single_test.sh $v -f gml -ds -db ./test/serial9b_1.gml ./test/serial9_2.gml
 ./single_test.sh $v -f gml -ds -db ./test/serial9c_1.gml ./test/serial9_2.gml ./test/serial4c_3.gml
+./single_test.sh $v -f json -j circle ./test/serial10.json
+./single_test.sh $v -f json -j circle -ds -db ./test/serial11.json

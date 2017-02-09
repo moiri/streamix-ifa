@@ -1,0 +1,10 @@
+[
+    {
+        "box": "A",
+        "ports": ["syn_ack?", "syn!", "ack!"]
+    },
+    {
+        "box": "B",
+        "ports": ["syn?", "syn_ack!", "ack?"]
+    }
+]
