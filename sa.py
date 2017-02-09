@@ -51,11 +51,10 @@ class Automata( object ):
                 if( self._isActionShared( act1, act2 ) ):
                     src = self._foldGetVertexId( mod, act1.source, act2.source )
                     dst = self._foldGetVertexId( mod, act1.target, act2.target )
-                    self._addEpsilon( g, src, dst )
-                    # g.add_edge( src, dst, name=act1['name'], mode=';',
-                    #         weight=0 )
+                    self._addEpsilon( g, src, dst, act1['name'] )
                     e_del1.append( act1 )
                     e_del2.append( act2 )
+
         # self.plot( g )
 
         # remove shared actions -> only independant actions are remaing
@@ -199,12 +198,13 @@ class Automata( object ):
         g.vs.select( init=False, end=True )['shape'] = "triangle"
         g.vs.select( init=True, end=False )['shape'] = "diamond"
         g.vs.select( init=True, end=True )['shape'] = "diamond"
-        g.es['label'] = [ n + m for n, m in zip( g.es['name'], g.es['mode'] ) ]
         g.vs['label'] = [ v.index for v in g.vs ]
-        g.es.select( weight=0 )['color'] = "green"
-        for v in g.vs:
-            if v.strength( weights="weight" ) == 0:
-                v["color"] = "green"
+        if g.ecount() > 0:
+            g.es['label'] = [ n + m for n, m in zip( g.es['name'], g.es['mode'] ) ]
+            g.es.select( weight=0 )['color'] = "green"
+            for v in g.vs:
+                if v.strength( weights="weight" ) == 0:
+                    v["color"] = "green"
         g.vs.select( dl=True )['color'] = "red"
 
     def _removeMultipleEdges( self, g ):
@@ -239,8 +239,9 @@ class Automata( object ):
         del g.vs['color']
         # del g.es['color']
         del g.vs['shape']
-        del g.es['label']
         del g.vs['label']
+        if g.ecount() > 0:
+            del g.es['label']
 
 
 class DlAutomata( Automata ):

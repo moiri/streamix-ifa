@@ -70,3 +70,10 @@ done
 ./single_test.sh $v$p-f json -ds -db ./test/feedback7.json
 ./single_test.sh $v$p-f json ./test/loop1.json
 ./single_test.sh $v$p-f json -ds ./test/loop2.json
+./single_test.sh $v$p-f json ./test/parallel1.json
+./single_test.sh $v$p-f json ./test/parallel2.json
+./single_test.sh $v$p-f json -ds ./test/parallel3.json
+./single_test.sh $v$p-f json ./test/parallel4.json
+./single_test.sh $v$p-f json -ds -db ./test/parallel5.json
+./single_test.sh $v$p-f json -ds ./test/parallel6.json
+./single_test.sh $v$p-f json -ds -db ./test/parallel7.json
