@@ -35,11 +35,13 @@ EOF
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+LGREY='\033[0;90m'
 NC='\033[0m'
 f="gml"
 ds="False"
 db="False"
 p=""
+j=""
 v=false
 infile=""
 while [ $# -gt 0 ] ; do
@@ -58,6 +60,10 @@ while [ $# -gt 0 ] ; do
             ;;
         -v)
             v=true
+            ;;
+        -j)
+            j="$2"
+            shift
             ;;
         -f)
             f="$2"
@@ -80,33 +86,39 @@ fi
 if [ "$f" == "gml" ]; then
     ja[0]=""
 elif [ "$f" == "json" ]; then
-    ja[0]=" -j circle"
-    ja[1]=" -j linear"
+    if [ -z "$j" ] ; then
+        ja[0]=" -j circle"
+        ja[1]=" -j linear"
+    else
+        ja[0]=" -j $j"
+    fi
 fi
 
-failed="${RED}failed${NC}:   "
-success="${GREEN}success${NC}:  "
+failed="${RED}failed${NC} "
+success="${GREEN}success${NC}"
 for j in "${ja[@]}"
 do
     cmd="./ifa.py -b$p -f $f$j -a sync $infile"
     out="$($cmd)"
+    out_pr=${LGREY}[${out//True/True }]${NC}
     if [ "$out" == "$ds" ]; then
         if [ "$v" = true ] ; then
-            echo -e "$success$cmd"
+            echo -e "$success $out_pr: $cmd"
         fi
     else
-        echo -e "$failed$cmd"
+        echo -e "$failed $out_pr: $cmd"
         echo -e "  => expected '$ds' got '$out'"
     fi
 
     cmd="./ifa.py -b$p -f $f$j -a buf $infile"
     out="$($cmd)"
+    out_pr=${LGREY}[${out//True/True }]${NC}
     if [ "$out" == "$db" ]; then
         if [ "$v" = true ] ; then
-            echo -e "$success$cmd"
+            echo -e "$success $out_pr: $cmd"
         fi
     else
-        echo -e "$failed$cmd"
+        echo -e "$failed $out_pr: $cmd"
         echo -e "  => expected '$db' got '$out'"
     fi
 done
