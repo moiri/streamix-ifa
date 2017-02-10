@@ -93,11 +93,12 @@ class Automata( object ):
                 v['reach'] = False
         if unreachable:
             self.plot( g )
-        # remove unreachable
+        # remove unreachable and check for progress
         a_int_all = g.es( mode=';' ).__len__()
         g.delete_vertices( g.vs.select( reach=False ) )
         a_int_reach = g.es( mode=';' ).__len__()
         if  a_int_all > 0 and a_int_reach == 0:
+            # no progress with this component -> dl
             g.vs( init=True )['dl'] = True
         g.es( mode=';' )['mode']=','
 

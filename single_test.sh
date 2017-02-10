@@ -100,7 +100,7 @@ for j in "${ja[@]}"
 do
     cmd="./ifa.py -b$p -f $f$j -a sync $infile"
     out="$($cmd)"
-    out_pr=${LGREY}[${out//True/True }]${NC}
+    out_pr=${LGREY}[dl=${out//True/True }]${NC}
     if [ "$out" == "$ds" ]; then
         if [ "$v" = true ] ; then
             echo -e "$success $out_pr: $cmd"
@@ -112,7 +112,7 @@ do
 
     cmd="./ifa.py -b$p -f $f$j -a buf $infile"
     out="$($cmd)"
-    out_pr=${LGREY}[${out//True/True }]${NC}
+    out_pr=${LGREY}[dl=${out//True/True }]${NC}
     if [ "$out" == "$db" ]; then
         if [ "$v" = true ] ; then
             echo -e "$success $out_pr: $cmd"
