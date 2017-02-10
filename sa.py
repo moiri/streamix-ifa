@@ -21,10 +21,6 @@ class Automata( object ):
         a._foldPostprocess()
         return a
 
-    def _addEpsilon( self, g, src, dst, name="eps" ):
-        """add a single epsilon transition"""
-        g.add_edge( src, dst, name=name, mode=';', weight=0 )
-
     def _combine_attrs_and( self, attrs ):
         """helper function to combine edge attributes"""
         res = True
@@ -51,7 +47,8 @@ class Automata( object ):
                 if( self._isActionShared( act1, act2 ) ):
                     src = self._foldGetVertexId( mod, act1.source, act2.source )
                     dst = self._foldGetVertexId( mod, act1.target, act2.target )
-                    self._addEpsilon( g, src, dst, act1['name'] )
+                    g.add_edge( src, dst, name='eps_' + act1['name'], mode=';',
+                            weight=0 )
                     e_del1.append( act1 )
                     e_del2.append( act2 )
 
@@ -97,7 +94,13 @@ class Automata( object ):
         if unreachable:
             self.plot( g )
         # remove unreachable
+        a_int_all = g.es( mode=';' ).__len__()
         g.delete_vertices( g.vs.select( reach=False ) )
+        a_int_reach = g.es( mode=';' ).__len__()
+        if  a_int_all > 0 and a_int_reach == 0:
+            g.vs( init=True )['dl'] = True
+        g.es( mode=';' )['mode']=','
+
         # mark deadkocks
         g.vs.select( _outdegree_eq=0, end=False )['dl'] = True
         g.vs.select( _outdegree_eq=0, end=True, init=True )['dl'] = True
@@ -133,7 +136,7 @@ class Automata( object ):
         while change:
             change = self._removeMultipleEdges( g )
             e_del = []
-            for e in g.es( name="eps" ):
+            for e in g.es( weight=0 ):
                 # if e.is_loop(): continue
                 if e.is_loop() and not g.vs[e.source]['init']:
                     e_del.append( e )
@@ -262,7 +265,7 @@ class DlAutomata( Automata ):
         for e in e_eps:
             v_dst = g.vcount()
             g.add_vertex( reach=True, end=False, init=False, dl=False )
-            self._addEpsilon( g, e.source, v_dst, "eps" )
+            g.add_edge( e.source, v_dst, name="eps", mode=',', weight=0 )
             g.add_edge( v_dst, e.target, name=e["name"], mode=e["mode"],
                     weight=1 )
 
