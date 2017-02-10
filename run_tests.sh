@@ -94,6 +94,7 @@ if [ -z "$t" ] || [ "$t" == "parallel" ]; then
     ./single_test.sh $v$p-f json -ds -db ./test/parallel5.json
     ./single_test.sh $v$p-f json -ds ./test/parallel6.json
     ./single_test.sh $v$p-f json -ds -db ./test/parallel7.json
+    ./single_test.sh $v$p-f json ./test/parallel8.json
 fi
 if [ -z "$t" ] || [ "$t" == "mult" ]; then
     ./single_test.sh $v$p-f json ./test/mult1.json
