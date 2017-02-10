@@ -77,3 +77,8 @@ done
 ./single_test.sh $v$p-f json -ds -db ./test/parallel5.json
 ./single_test.sh $v$p-f json -ds ./test/parallel6.json
 ./single_test.sh $v$p-f json -ds -db ./test/parallel7.json
+./single_test.sh $v$p-f json ./test/mult1.json
+./single_test.sh $v$p-f json -j circle ./test/mult2.json
+./single_test.sh $v$p-f json -j linear -ds -db ./test/mult2.json
+./single_test.sh $v$p-f json -j circle ./test/mult3.json
+./single_test.sh $v$p-f json -j linear -ds -db ./test/mult3.json
