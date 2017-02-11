@@ -41,9 +41,9 @@ LGREY='\033[0;90m'
 YELLOW='\033[0;33m'
 NC='\033[0m'
 f="gml"
-ds="False"
-db="False"
-flags="-b"
+ds=false
+db=false
+flags=""
 j=""
 a=""
 v=false
@@ -54,10 +54,10 @@ while [ $# -gt 0 ] ; do
             usage
             ;;
         -ds)
-            ds="True"
+            ds=true
             ;;
         -db)
-            db="True"
+            db=true
             ;;
         -p)
             flags="-p $flags"
@@ -116,26 +116,32 @@ do
     for a in "${aa[@]}"
     do
         if [ "$a" == "sync" ] ; then
-            res=$ds
+            sol=$ds
         elif [ "$a" == "buf" ] ; then
-            res=$db
+            sol=$db
         fi
         cmd="./ifa.py $flags $j -f $f -a $a $infile"
-        if [ "$v" = true ] ; then
+        if $v; then
             echo "testing: $cmd"
         fi
-        out="$( $cmd 2>&1 > /dev/null )"
-        out_pr=${LGREY}[dl=${out//True/True }]${NC}
-        if [ "$out" == "$res" ]; then
-            if [ "$v" = true ] ; then
+        out="$($cmd)"
+        if [ -z "$out" ]; then
+            res=false
+            out_pr=""
+        else
+            res=true
+            out_pr=${LGREY}[$out]${NC}
+        fi
+        if ( $res && $sol ) || ( ! $res && ! $sol ); then
+            if $v; then
                 echo -e " => $success $out_pr"
             fi
         else
-            if [ "$v" = false ] ; then
-                echo -e "$failed $out_pr: $cmd"
-                echo -e " => ${YELLOW}expected '$res' got '$out'${NC}"
+            if $v; then
+                echo -e " => $failed $out_pr, ${YELLOW}expected '$sol' got '$res'${NC}"
             else
-                echo -e " => $failed $out_pr, ${YELLOW}expected '$res'${NC}"
+                echo -e "$failed $out_pr: $cmd"
+                echo -e " => ${YELLOW}expected '$sol' got '$res'${NC}"
             fi
         fi
     done

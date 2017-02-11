@@ -19,7 +19,6 @@ parser.add_argument( '-a', metavar="AUTOMATA", dest='automata', choices=['ifa', 
 parser.add_argument( '-u', '--unreachable', action='store_true', help='show graph with unreachable states after folding operation' )
 parser.add_argument( '-s', '--step', action='store_true', help='show all intermediate interface automata' )
 parser.add_argument( '-p', '--plot', action='store_true', help='plot the final graph' )
-parser.add_argument( '-b', '--bool', action='store_true', help='print a boolean instead of and error message' )
 parser.add_argument( 'infiles', nargs='+', metavar="INFILE" )
 args = parser.parse_args()
 
@@ -172,15 +171,10 @@ def ifaFoldAll( ifas, cb_parse ):
             af.plot()
         if af.isDeadlocking():
             res = True
-            if args.bool:
-                sys.stderr.write( str(res) + "\n" )
-            print "Error: sytem is potentially deadlocking at " + a1.name \
+            print "Error: sytem is deadlocking at " + a1.name \
                     + " and " + a2.name
             return af
         a1 = af
-
-    if args.bool:
-        sys.stderr.write( str(res) + "\n" )
 
     return a1
 
