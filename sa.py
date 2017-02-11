@@ -109,7 +109,9 @@ class Automata( object ):
 
     def _foldPreprocess( self, g, g1, g2 ):
         """operations before folding"""
-        g["name"] = g1["name"] + "x" + g2["name"]
+        mul = "*"
+        if g1["name"] == "" or g2["name"] == "": mul=""
+        g["name"] = g1["name"] + mul + g2["name"]
         g.add_vertices( g1.vcount() * g2.vcount() )
         g.vs['reach'] = True
         g.vs['dl'] = False
@@ -247,6 +249,18 @@ class Automata( object ):
         vdl = self.g.vs.select( dl=True ).__len__()
         return ( vdl > 0 )
 
+    def getDeadlockString( self ):
+        str_dl = []
+        for v in self.g.vs.select( dl=True ):
+            for e in self.g.es( self.g.incident( v ) ):
+                str_dl.append( e["name"] )
+
+        if len( str_dl ) == 0:
+            return " due to a non-progressing component"
+        else:
+            res = ", ".join( str_dl )
+            return " on signals " + res
+
     def plot( self, g=None, layout="auto" ):
         """plot the graph"""
         if g is None:
@@ -309,7 +323,7 @@ class StreamDlAutomata( Automata ):
                 e_buf.append( e["name"] )
 
         g_buf_init = igraph.Graph( 2, directed=True )
-        g_buf_init["name"] = "buf"
+        g_buf_init["name"] = ""
         g_buf_init.vs["init"] = False
         g_buf_init.vs["end"] = False
         g_buf_init.vs["reach"] = True
