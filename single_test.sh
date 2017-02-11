@@ -23,6 +23,8 @@ Run the ifa script and compare the output to a sulution file
 Options:
 -h, --help          display this usage message and exit
 -f FORMAT           set the format of the input graph (default: gml)
+-j TOPOLOGY         only test the specified json topology
+-a AUTOMATA         only test the specified automata type
 -p                  print final graph
 -v                  verbose
 -ds                 if set sync is deadlocking
@@ -36,12 +38,14 @@ EOF
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 LGREY='\033[0;90m'
+YELLOW='\033[0;33m'
 NC='\033[0m'
 f="gml"
 ds="False"
 db="False"
-p=""
+flags="-b"
 j=""
+a=""
 v=false
 infile=""
 while [ $# -gt 0 ] ; do
@@ -56,13 +60,17 @@ while [ $# -gt 0 ] ; do
             db="True"
             ;;
         -p)
-            p=" -p"
+            flags="-p $flags"
             ;;
         -v)
             v=true
             ;;
         -j)
             j="$2"
+            shift
+            ;;
+        -a)
+            a="$2"
             shift
             ;;
         -f)
@@ -87,38 +95,48 @@ if [ "$f" == "gml" ]; then
     ja[0]=""
 elif [ "$f" == "json" ]; then
     if [ -z "$j" ] ; then
-        ja[0]=" -j circle"
-        ja[1]=" -j linear"
+        ja[0]="-j circle"
+        ja[1]="-j linear"
     else
-        ja[0]=" -j $j"
+        ja[0]="-j $j"
     fi
+fi
+
+if [ -z "$a" ]; then
+    aa[0]="sync"
+    aa[1]="buf"
+else
+    aa[0]="$a"
 fi
 
 failed="${RED}failed${NC} "
 success="${GREEN}success${NC}"
 for j in "${ja[@]}"
 do
-    cmd="./ifa.py -b$p -f $f$j -a sync $infile"
-    out="$($cmd)"
-    out_pr=${LGREY}[dl=${out//True/True }]${NC}
-    if [ "$out" == "$ds" ]; then
-        if [ "$v" = true ] ; then
-            echo -e "$success $out_pr: $cmd"
+    for a in "${aa[@]}"
+    do
+        if [ "$a" == "sync" ] ; then
+            res=$ds
+        elif [ "$a" == "buf" ] ; then
+            res=$db
         fi
-    else
-        echo -e "$failed $out_pr: $cmd"
-        echo -e "  => expected '$ds' got '$out'"
-    fi
-
-    cmd="./ifa.py -b$p -f $f$j -a buf $infile"
-    out="$($cmd)"
-    out_pr=${LGREY}[dl=${out//True/True }]${NC}
-    if [ "$out" == "$db" ]; then
+        cmd="./ifa.py $flags $j -f $f -a $a $infile"
         if [ "$v" = true ] ; then
-            echo -e "$success $out_pr: $cmd"
+            echo "testing: $cmd"
         fi
-    else
-        echo -e "$failed $out_pr: $cmd"
-        echo -e "  => expected '$db' got '$out'"
-    fi
+        out="$( $cmd 2>&1 > /dev/null )"
+        out_pr=${LGREY}[dl=${out//True/True }]${NC}
+        if [ "$out" == "$res" ]; then
+            if [ "$v" = true ] ; then
+                echo -e " => $success $out_pr"
+            fi
+        else
+            if [ "$v" = false ] ; then
+                echo -e "$failed $out_pr: $cmd"
+                echo -e " => ${YELLOW}expected '$res' got '$out'${NC}"
+            else
+                echo -e " => $failed $out_pr, ${YELLOW}expected '$res'${NC}"
+            fi
+        fi
+    done
 done

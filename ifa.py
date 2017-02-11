@@ -173,14 +173,14 @@ def ifaFoldAll( ifas, cb_parse ):
         if af.isDeadlocking():
             res = True
             if args.bool:
-                print res
-            if not args.bool:
-                print "Error: sytem is potentially deadlocking at " + a1.name \
-                        + " and " + a2.name
+                sys.stderr.write( str(res) + "\n" )
+            print "Error: sytem is potentially deadlocking at " + a1.name \
+                    + " and " + a2.name
             return af
         a1 = af
 
-    if args.bool: print res
+    if args.bool:
+        sys.stderr.write( str(res) )
 
     return a1
 
