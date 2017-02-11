@@ -109,7 +109,7 @@ else
     aa[0]="$a"
 fi
 
-failed="${RED}failed${NC} "
+failed="${RED}failed${NC}"
 success="${GREEN}success${NC}"
 for j in "${ja[@]}"
 do
@@ -130,19 +130,17 @@ do
             out_pr=""
         else
             res=true
-            out_pr=${LGREY}[$out]${NC}
+            out_pr=" ${LGREY}[$out]${NC}"
         fi
         if ( $res && $sol ) || ( ! $res && ! $sol ); then
             if $v; then
-                echo -e " => $success $out_pr"
+                echo -e " => $success$out_pr"
             fi
         else
-            if $v; then
-                echo -e " => $failed $out_pr, ${YELLOW}expected '$sol' got '$res'${NC}"
-            else
-                echo -e "$failed $out_pr: $cmd"
-                echo -e " => ${YELLOW}expected '$sol' got '$res'${NC}"
+            if ! $v; then
+                echo "testing: $cmd"
             fi
+            echo -e " => $failed$out_pr ${YELLOW}expected '$sol' got '$res'${NC}"
         fi
     done
 done
