@@ -180,7 +180,7 @@ def ifaFoldAll( ifas, cb_parse ):
         a1 = af
 
     if args.bool:
-        sys.stderr.write( str(res) )
+        sys.stderr.write( str(res) + "\n" )
 
     return a1
 

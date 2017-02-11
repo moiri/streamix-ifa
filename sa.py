@@ -109,7 +109,7 @@ class Automata( object ):
 
     def _foldPreprocess( self, g, g1, g2 ):
         """operations before folding"""
-        g["name"] = "fold"
+        g["name"] = g1["name"] + "x" + g2["name"]
         g.add_vertices( g1.vcount() * g2.vcount() )
         g.vs['reach'] = True
         g.vs['dl'] = False
@@ -166,13 +166,26 @@ class Automata( object ):
 
         return names
 
+    def _insertEpsilons( self, g, e_eps ):
+        """insert epsilon tarnsitions on non-deterministics shared actions"""
+
+        for e in e_eps:
+            v_dst = g.vcount()
+            g.add_vertex( reach=True, end=False, init=False, dl=False )
+            g.add_edge( e.source, v_dst, name="eps", mode=',', weight=0 )
+            g.add_edge( v_dst, e.target, name=e["name"], mode=e["mode"],
+                    weight=1 )
+
+        g.delete_edges( e_eps )
+
     def _isActionShared( self, edge1, edge2 ):
         """check whether the two edges are shared actions"""
         if( edge1['name'] == edge2['name'] ):
             if ( ( edge1['mode'] == '?' and edge2['mode'] == '!' ) or
                     ( edge1['mode'] == '!' and edge2['mode'] == '?' ) ):
                 return True
-            elif ( edge1['mode'] != ';' and edge2['mode'] != ';' ):
+            elif edge1['mode'] != ';' and edge2['mode'] != ';' \
+                    and edge1['mode'] != ',' and edge2['mode'] != ',':
                 raise ValueError( edge1['name'] + edge1['mode'] + " and " +
                         edge2['name'] + edge2['mode'] + " are incompatible!" )
 
@@ -253,40 +266,45 @@ class DlAutomata( Automata ):
 
     def __init__( self, g, unreachable=False, step=False ):
         super( DlAutomata, self ).__init__( g, unreachable, step )
-        self._addDlSemantics( self.g )
+        self._addDlSemantics()
 
-    def _addDlSemantics( self, g ):
+    def _addDlSemantics( self ):
         """insert epsilon tarnsitions on non-deterministics shared actions"""
         e_eps = []
+        g = self.g
         g.vs['strength'] = g.strength( g.vs, mode="OUT", weights='weight' )
         for v in g.vs( strength_gt=1 ):
             e_eps += g.es( g.adjacent( v ) )
         del g.vs['strength']
 
-        for e in e_eps:
-            v_dst = g.vcount()
-            g.add_vertex( reach=True, end=False, init=False, dl=False )
-            g.add_edge( e.source, v_dst, name="eps", mode=',', weight=0 )
-            g.add_edge( v_dst, e.target, name=e["name"], mode=e["mode"],
-                    weight=1 )
-
-        g.delete_edges( e_eps )
+        self._insertEpsilons( g, e_eps )
 
 
-class StreamDlAutomata( DlAutomata ):
+class StreamDlAutomata( Automata ):
     """Automata class with deadlock extension for buffered communication,
     introducing epsilon tarnsitions on 'non-deterministic' protocol states"""
 
     def __init__( self, g, unreachable=False, step=False ):
         super( StreamDlAutomata, self ).__init__( g, unreachable, step )
-        self.g = self._addQueueSemantics( self.g )
+        self._addDlSemantics()
+        self._addQueueSemantics()
 
-    def _addQueueSemantics( self, g_in ):
+    def _addDlSemantics( self ):
+        """insert epsilon tarnsitions on non-deterministics shared actions"""
+        e_eps = []
+        g = self.g
+        g.vs['strength'] = g.strength( g.vs, mode="OUT", weights='weight' )
+        for v in g.vs( strength_gt=1 ):
+            e_eps += g.es( g.adjacent( v ), mode="?" )
+        del g.vs['strength']
+
+        self._insertEpsilons( g, e_eps )
+
+    def _addQueueSemantics( self ):
         """fold each output with a automaton modeling a buffer"""
         e_buf = []
-        gfinal = None
-        g_in = g_in.copy()
-        for e in g_in.es( mode='!' ):
+        a_in = self
+        for e in a_in.g.es( mode='!' ):
             if e["name"] not in e_buf:
                 e_buf.append( e["name"] )
 
@@ -299,14 +317,13 @@ class StreamDlAutomata( DlAutomata ):
         g_buf_init.vs( 0 )["init"] = True
         g_buf_init.vs( 0 )["end"] = True
         q_prefix = "_queue_"
-        a_in = DlAutomata( g_in )
 
         for name in e_buf:
             q_name = q_prefix + name
             g_buf = g_buf_init.copy()
             g_buf.add_edge( 0, 1, name=name, mode='?', weight=1 )
             g_buf.add_edge( 1, 0, name=q_name, mode='!', weight=1 )
-            a_buf = DlAutomata( g_buf )
+            a_buf = Automata( g_buf )
             # self.plot( a_in.g )
             # self.plot( a_buf.g )
             a_in = a_in * a_buf
@@ -319,4 +336,4 @@ class StreamDlAutomata( DlAutomata ):
 
         # self.plot( a_in.g )
 
-        return a_in.g
+        self.g = a_in.g
