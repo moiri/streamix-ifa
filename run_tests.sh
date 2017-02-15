@@ -92,6 +92,7 @@ if [ -z "$t" ] || [ "$t" == "feedback" ]; then
     ./single_test.sh $v $p $a -f json ./test/feedback6.json
     ./single_test.sh $v $p $a -f json -ds -db ./test/feedback7.json
     ./single_test.sh $v $p $a -f json -ds ./test/feedback8.json
+    ./single_test.sh $v $p $a -f gml ./test/feedback9_1.gml ./test/feedback9_2.gml ./test/feedback9_3.gml
 fi
 if [ -z "$t" ] || [ "$t" == "loop" ]; then
     ./single_test.sh $v $p $a -f json ./test/loop1.json
@@ -114,4 +115,5 @@ if [ -z "$t" ] || [ "$t" == "mult" ]; then
     ./single_test.sh $v $p $a -f json -j circle ./test/mult3.json
     ./single_test.sh $v $p $a -f json -j linear -ds -db ./test/mult3.json
     ./single_test.sh $v $p $a -f json -ds -db ./test/mult4.json
+    ./single_test.sh $v $p $a -f json -ds -db ./test/mult5.json
 fi
