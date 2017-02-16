@@ -78,6 +78,8 @@ if [ -z "$t" ] || [ "$t" == "serial" ]; then
     ./single_test.sh $v $p $a -f json ./test/serial5.json
     ./single_test.sh $v $p $a -f json -ds ./test/serial6.json
     ./single_test.sh $v $p $a -f json -ds ./test/serial7.json
+    ./single_test.sh $v $p $a -f gml -ds ./test/serial8_1.gml ./test/serial8_2.gml
+    ./single_test.sh $v $p $a -f gml -ds ./test/serial8b_1.gml ./test/serial8_2.gml
 fi
 if [ -z "$t" ] || [ "$t" == "feedback" ]; then
     ./single_test.sh $v $p $a -f json ./test/feedback1.json
