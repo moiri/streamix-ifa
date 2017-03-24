@@ -32,7 +32,6 @@ def fold( g1, g2, shared ):
     mod = g2.vcount()
     g.vs['reach'] = False
     g.vs['end'] = False
-    g.vs['block'] = False
 
     # find shared actions
     for name in shared:
@@ -77,45 +76,68 @@ def printError( nameSub, stateSub, name, state ):
             + " in state " + str( stateSub ) + " (system " + name \
             + " in state " + str( state ) + ")"
 
-def markBlocking( v, g, g_sys, isMay=False ):
+def markBlockingMust( v, g, g_sys ):
     hasAction = False
     if g.vs[v]['reach']:
-        return hasAction and not isMay
+        return hasAction
     g.vs[v]['reach'] = True
 
     for e in g.es( g.incident(v) ):
         if e['weight'] == 0:
-            isMay = True
+            continue
         if g_sys['name'] in e['sys']:
             hasAction = True
-        print (v, e['name'], hasAction, isMay)
-        hasAction = markBlocking( e.target, g, g_sys, isMay ) or hasAction
-        print (v, "return from " + e['name'], hasAction, isMay)
+        hasAction = markBlockingMust( e.target, g, g_sys ) or hasAction
 
+    bSubsys = g.vs[v]['block']
     sSubsys = g.vs[v]['states']
-    if ( g.vs[v]['strength'] == 0 ) or (not hasAction):
+    if ( g.vs[v]['strength'] == 0 ) or not hasAction:
         if not g_sys.vs[sSubsys[g_sys['name']]]['end']:
             printError( g_sys['name'], sSubsys[g_sys['name']], g['name'], v )
-            g.vs[v]['block'] = True
-    return hasAction and not isMay
+            bSubsys[g_sys['name']] = True
+    return hasAction
+
+def markBlockingMay( v, g, g_sys ):
+    hasAction = False
+    if g.vs[v]['reach']:
+        return hasAction
+    g.vs[v]['reach'] = True
+
+    for e in g.es( g.incident(v) ):
+        if g_sys['name'] in e['sys']:
+            hasAction = True
+        hasAction = markBlockingMay( e.target, g, g_sys ) or hasAction
+
+    sSubsys = g.vs[v]['states']
+    bSubsys = g.vs[v]['block']
+    if not bSubsys[g_sys['name']] and ( g.vs[v]['strength'] == 0 or not hasAction ):
+        if not g_sys.vs[sSubsys[g_sys['name']]]['end']:
+            printError( g_sys['name'], sSubsys[g_sys['name']], g['name'], v )
+            bSubsys[g_sys['name']] = True
+    return hasAction
 
 def preProgress( g ):
     g.vs['end'] = False
     g.vs['block'] = False
     g.vs['strength'] = g.strength( g.vs, mode="OUT", weights='weight' )
     g.vs( strength_eq=0 )['end'] = True
-    plot(g)
+    # plot(g)
 
 def checkSys( g1, g2, shared, debug=False ):
     g = fold( g1, g2, shared )
     g.vs['strength'] = g.strength( g.vs, mode="OUT", weights='weight' )
+    g.vs['block'] = { g1['name']: False, g2['name']: False }
     preProgress( g1 )
     preProgress( g2 )
-    print g1['name']
-    markBlocking( 0, g, g1 )
+    # print g1['name']
+    markBlockingMust( 0, g, g1 )
     g.vs['reach'] = False
-    print g2['name']
-    markBlocking( 0, g, g2 )
+    markBlockingMay( 0, g, g1 )
+    g.vs['reach'] = False
+    # print g2['name']
+    markBlockingMust( 0, g, g2 )
+    g.vs['reach'] = False
+    markBlockingMay( 0, g, g2 )
     g.delete_vertices( g.vs.select( reach=False ) )
     if debug: plot(g)
     del g.vs['reach']
