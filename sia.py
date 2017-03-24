@@ -76,45 +76,35 @@ def printError( nameSub, stateSub, name, state ):
             + " in state " + str( stateSub ) + " (system " + name \
             + " in state " + str( state ) + ")"
 
-def markBlockingMust( v, g, g_sys ):
+def markBlocking( v, g, g_sys, must ):
     hasAction = False
     if g.vs[v]['reach']:
         return hasAction
     g.vs[v]['reach'] = True
 
     for e in g.es( g.incident(v) ):
-        if e['weight'] == 0:
+        if must and e['weight'] == 0:
             continue
         if g_sys['name'] in e['sys']:
             hasAction = True
-        hasAction = markBlockingMust( e.target, g, g_sys ) or hasAction
+        hasAction = markBlocking( e.target, g, g_sys, must ) or hasAction
 
-    bSubsys = g.vs[v]['block']
     sSubsys = g.vs[v]['states']
-    if ( g.vs[v]['strength'] == 0 ) or not hasAction:
-        if not g_sys.vs[sSubsys[g_sys['name']]]['end']:
+    bSubsys = g.vs[v]['block']
+    if must or not bSubsys[g_sys['name']]:
+        if ( g.vs[v]['strength'] == 0 or not hasAction ) \
+                and not g_sys.vs[sSubsys[g_sys['name']]]['end']:
             printError( g_sys['name'], sSubsys[g_sys['name']], g['name'], v )
             bSubsys[g_sys['name']] = True
     return hasAction
+
+def markBlockingMust( v, g, g_sys ):
+    g.vs['reach'] = False
+    markBlocking( v, g, g_sys, True )
 
 def markBlockingMay( v, g, g_sys ):
-    hasAction = False
-    if g.vs[v]['reach']:
-        return hasAction
-    g.vs[v]['reach'] = True
-
-    for e in g.es( g.incident(v) ):
-        if g_sys['name'] in e['sys']:
-            hasAction = True
-        hasAction = markBlockingMay( e.target, g, g_sys ) or hasAction
-
-    sSubsys = g.vs[v]['states']
-    bSubsys = g.vs[v]['block']
-    if not bSubsys[g_sys['name']] and ( g.vs[v]['strength'] == 0 or not hasAction ):
-        if not g_sys.vs[sSubsys[g_sys['name']]]['end']:
-            printError( g_sys['name'], sSubsys[g_sys['name']], g['name'], v )
-            bSubsys[g_sys['name']] = True
-    return hasAction
+    g.vs['reach'] = False
+    markBlocking( v, g, g_sys, False )
 
 def preProgress( g ):
     g.vs['end'] = False
@@ -131,12 +121,9 @@ def checkSys( g1, g2, shared, debug=False ):
     preProgress( g2 )
     # print g1['name']
     markBlockingMust( 0, g, g1 )
-    g.vs['reach'] = False
     markBlockingMay( 0, g, g1 )
-    g.vs['reach'] = False
     # print g2['name']
     markBlockingMust( 0, g, g2 )
-    g.vs['reach'] = False
     markBlockingMay( 0, g, g2 )
     g.delete_vertices( g.vs.select( reach=False ) )
     if debug: plot(g)
