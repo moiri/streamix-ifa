@@ -2,7 +2,7 @@
 import igraph, sia
 
 debug = False
-# debug = True
+debug = True
 
 print "Test1 [live]"
 g1 = igraph.Graph( 3, [(0,1),(0,2)], True )

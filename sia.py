@@ -6,7 +6,7 @@ def plot( g=None, layout="auto" ):
     """plot the graph"""
     g.vs['color'] = "grey"
     g.vs[0]['shape'] = "triangle"
-    g.vs( block=True )['color'] = "red"
+    g.vs( blocking=True )['color'] = "red"
     g.vs( end=True )['shape'] = "diamond"
     g.vs['label'] = [ v.index for v in g.vs ]
     if g.ecount() > 0:
@@ -96,6 +96,7 @@ def markBlocking( v, g, g_sys, must ):
                 and not g_sys.vs[sSubsys[g_sys['name']]]['end']:
             printError( g_sys['name'], sSubsys[g_sys['name']], g['name'], v )
             bSubsys[g_sys['name']] = True
+            g.vs[v]['blocking'] = True
     return hasAction
 
 def markBlockingMust( v, g, g_sys ):
@@ -108,7 +109,7 @@ def markBlockingMay( v, g, g_sys ):
 
 def preProgress( g ):
     g.vs['end'] = False
-    g.vs['block'] = False
+    g.vs['blocking'] = False
     g.vs['strength'] = g.strength( g.vs, mode="OUT", weights='weight' )
     g.vs( strength_eq=0 )['end'] = True
     # plot(g)
@@ -117,6 +118,7 @@ def checkSys( g1, g2, shared, debug=False ):
     g = fold( g1, g2, shared )
     g.vs['strength'] = g.strength( g.vs, mode="OUT", weights='weight' )
     g.vs['block'] = { g1['name']: False, g2['name']: False }
+    g.vs['blocking'] = False
     preProgress( g1 )
     preProgress( g2 )
     # print g1['name']
