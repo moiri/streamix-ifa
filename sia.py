@@ -23,12 +23,12 @@ def getVertexId( mod, q, r ):
     """calculate the index of the folded state"""
     return mod * q + r
 
-def fold( g1, g2, shared ):
+def fold( g1, g2, shared, prop=False ):
     """fold two graphs together"""
     # self.plot( g1 )
     # self.plot( g2 )
     mod = g2.vcount()
-    g = foldPreprocess( g1, g2, mod )
+    g = foldPreprocess( g1, g2, mod, prop )
 
     # find shared actions
     for name in shared:
@@ -37,7 +37,7 @@ def fold( g1, g2, shared ):
                 src = getVertexId( mod, e1.source, e2.source )
                 dst = getVertexId( mod, e1.target, e2.target )
                 g.add_edge( src, dst, name=name, mode=';', weight=1,
-                        sys=[g1['name'], g2['name']])
+                        sys=setEdgeAttrSysShared( g1, g2, e1, e2, prop ) )
 
     # find independant actions in g1
     for act in g1.es:
@@ -47,7 +47,7 @@ def fold( g1, g2, shared ):
             src = getVertexId( mod, act.source, idx )
             dst = getVertexId( mod, act.target, idx )
             g.add_edge( src, dst, name=act['name'], mode=act['mode'],
-                    sys=[g1['name']], weight=act['weight'] )
+                    sys=setEdgeAttrSys( g1, act, prop ), weight=act['weight'] )
 
     # find independant actions in g2
     for act in g2.es:
@@ -57,72 +57,33 @@ def fold( g1, g2, shared ):
             src = getVertexId( mod, idx, act.source )
             dst = getVertexId( mod, idx, act.target )
             g.add_edge( src, dst, name=act['name'], mode=act['mode'],
-                    sys=[g2['name']], weight=act['weight'] )
+                    sys=setEdgeAttrSys( g2, act, prop ), weight=act['weight'] )
 
     foldPostprocess( g )
     return g
     # self.plot( g )
 
-def foldPropagate( g1, g2, shared ):
-    """fold two graphs together"""
-    # self.plot( g1 )
-    # self.plot( g2 )
-    mod = g2.vcount()
-    g = foldPreprocessPropagate( g1, g2, mod )
+def setEdgeAttrSys( g, e, prop=False ):
+    if prop:
+        return e['sys']
+    else:
+        return [g['name']]
 
-    # find shared actions
-    for name in shared:
-        for e1 in g1.es( name=name ):
-            for e2 in g2.es( name=name ):
-                src = getVertexId( mod, e1.source, e2.source )
-                dst = getVertexId( mod, e1.target, e2.target )
-                g.add_edge( src, dst, name=name, mode=';', weight=1,
-                        sys=e1['sys'] + e2['sys'])
+def setEdgeAttrSysShared( g1, g2, e1, e2, prop=False ):
+    if prop:
+        return e1['sys'] + e2['sys']
+    else:
+        return [g1['name'], g2['name']]
 
-    # find independant actions in g1
-    for act in g1.es:
-        if act['name'] in shared:
-            continue
-        for idx in range( 0, g2.vcount() ):
-            src = getVertexId( mod, act.source, idx )
-            dst = getVertexId( mod, act.target, idx )
-            g.add_edge( src, dst, name=act['name'], mode=act['mode'],
-                    sys=act['sys'], weight=act['weight'] )
-
-    # find independant actions in g2
-    for act in g2.es:
-        if act['name'] in shared:
-            continue
-        for idx in range( 0, g1.vcount() ):
-            src = getVertexId( mod, idx, act.source )
-            dst = getVertexId( mod, idx, act.target )
-            g.add_edge( src, dst, name=act['name'], mode=act['mode'],
-                    sys=act['sys'], weight=act['weight'] )
-
-    foldPostprocess( g )
-    return g
-    # self.plot( g )
-
-def foldPreprocess( g1, g2, mod ):
-    g = igraph.Graph( g1.vcount()*g2.vcount(), directed=True )
-    g['name'] = g1['name'] + g2['name']
-    g.vs['reach'] = False
-    g.vs['end'] = False
-    g.vs['blocking'] = False
-
-    idx1 = 0
-    idx2 = 0
-    for v in g.vs():
-        v['subsys'] = { g1['name']: { 'state': idx1, 'block': [] },
+def setVertexAttrSys(g1, g2, idx1, idx2, prop=False ):
+    if prop:
+        return dict( g1.vs[idx1]['subsys'], **g2.vs[idx2]['subsys'] )
+    else:
+        return { g1['name']: { 'state': idx1, 'block': [] },
                 g2['name']: { 'state': idx2, 'block': [] } }
-        idx2 += 1
-        if idx2 >= mod:
-            idx2 = 0
-            idx1 += 1
 
-    return g
 
-def foldPreprocessPropagate( g1, g2, mod ):
+def foldPreprocess( g1, g2, mod, prop=False ):
     g = igraph.Graph( g1.vcount()*g2.vcount(), directed=True )
     g['name'] = g1['name'] + g2['name']
     g.vs['reach'] = False
@@ -132,7 +93,7 @@ def foldPreprocessPropagate( g1, g2, mod ):
     idx1 = 0
     idx2 = 0
     for v in g.vs():
-        v['subsys'] = dict( g1.vs[idx1]['subsys'], **g2.vs[idx2]['subsys'] )
+        v['subsys'] = setVertexAttrSys( g1, g2, idx1, idx2, prop )
         idx2 += 1
         if idx2 >= mod:
             idx2 = 0
@@ -142,7 +103,6 @@ def foldPreprocessPropagate( g1, g2, mod ):
 
 def foldPostprocess( g ):
     g.vs['strength'] = g.strength( g.vs, mode="OUT", weights='weight' )
-    g.vs( strength_eq=0 )['end'] = True
 
 def foldInc( sys_a, nw ):
     g = sys_a[0]
@@ -157,19 +117,24 @@ def foldInc( sys_a, nw ):
         markBlockingMay( g_fold, [g, sys] )
         printErrorInc( g_fold, g, sys, shared )
         g = g_fold
+        g.delete_vertices( g.vs.select( reach=False ) )
+        # igraph.plot(nw_inc)
+        # plot(g)
 
     return g
 
 def foldFlat( sys_a, nw ):
     g = sys_a[0]
-    preProcessPropagate( g )
+    preProcess( g, True )
     nw_inc = nw.copy()
     for sys in sys_a[1:]:
-        preProcessPropagate( sys )
+        preProcess( sys, True )
         shared = getShared( nw_inc, g, sys )
         nw_inc = abstractGraph( nw_inc, g, sys, shared )
-        g_fold = foldPropagate( g, sys, shared )
+        g_fold = fold( g, sys, shared, True )
         g = g_fold
+        markReach( g )
+        g.delete_vertices( g.vs.select( reach=False ) )
 
     markBlockingMust( g, sys_a )
     markBlockingMay( g, sys_a )
@@ -275,7 +240,7 @@ def printErrorSub( name, state, actions ):
             + " on actions " + str( actions )
 
 def printErrorDl( name_a ):
-    str = "  => system "
+    str = "  => systems "
     for name in name_a[:-1]:
         str += name + " and "
     str += name_a[-1] + " are deadlocking"
@@ -283,6 +248,16 @@ def printErrorDl( name_a ):
 
 def printErrorLb( name ):
     print "  => system " + name + " is lonely blocking"
+
+def markReach( g, v=0 ):
+    if g.vs[v]['reach']:
+        return
+    g.vs[v]['reach'] = True
+
+    for e in g.es( g.incident(v) ):
+        markReach( g, e.target )
+
+    return
 
 def markBlocking( v, g, g_sys_a, must ):
     hasAction = [False] * len( g_sys_a )
@@ -326,15 +301,13 @@ def markBlockingMay( g, g_a ):
     g.vs['reach'] = False
     markBlocking( 0, g, g_a, False )
 
-def preProcess( g ):
+def preProcess( g, prop=False ):
     g.vs['end'] = False
     g.vs['blocking'] = False
     g.vs['strength'] = g.strength( g.vs, mode="OUT", weights='weight' )
     g.vs( strength_eq=0 )['end'] = True
+    if prop:
+        for v in g.vs():
+            v['subsys'] = { g['name']: { 'state': v.index, 'block': [] } }
+        g.es['sys'] = [g['name']]
     # plot(g)
-
-def preProcessPropagate( g ):
-    preProcess( g )
-    for v in g.vs():
-        v['subsys'] = { g['name']: { 'state': v.index, 'block': [] } }
-    g.es['sys'] = [g['name']]

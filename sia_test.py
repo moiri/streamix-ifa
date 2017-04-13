@@ -3,7 +3,7 @@ import igraph, sia
 
 debug = 0
 siaTest = sia.foldInc
-# siaTest = sia.foldFlat
+siaTest = sia.foldFlat
 
 print "Test1 [live]"
 nw = igraph.Graph( 2, [(0,1),(0,1)], True )
@@ -21,6 +21,7 @@ g2.es['name'] = ["a","b"]
 g2.es['weight'] = 1
 
 g = siaTest( [g1, g2], nw )
+print
 
 
 print "Test2 [blocking: dl A,B]"
@@ -39,6 +40,7 @@ g2.es['name'] = ["a"]
 g2.es['weight'] = 1
 
 g = siaTest( [g1, g2], nw )
+print
 
 
 print "Test3 [live]"
@@ -56,6 +58,7 @@ g2.es['name'] = ["d2"]
 g2.es['weight'] = 1
 
 g = siaTest( [g1, g2], nw )
+print
 
 
 print "Test4 [blocking: lb B]"
@@ -74,6 +77,7 @@ g2.es['name'] = ["a"]
 g2.es['weight'] = 1
 
 g = siaTest( [g1, g2], nw )
+print
 
 
 print "Test5 [live]"
@@ -91,6 +95,7 @@ g2.es['name'] = ["d2"]
 g2.es['weight'] = 1
 
 g = siaTest( [g1, g2], nw )
+print
 
 
 print "Test6 [blocking: lb A]"
@@ -109,6 +114,7 @@ g2.es['name'] = ["d2"]
 g2.es['weight'] = 1
 
 g = siaTest( [g1, g2], nw )
+print
 
 
 print "Test7 [blocking: lb A]"
@@ -127,6 +133,7 @@ g2.es['name'] = ["d2"]
 g2.es['weight'] = 1
 
 g = siaTest( [g1, g2], nw )
+print
 
 
 print "Test8 [blocking, dl A,B]"
@@ -155,10 +162,12 @@ g4.es['name'] = ["c", "d"]
 g4.es['weight'] = 1
 
 g = siaTest( [g1, g2, g3, g4], nw )
+print
 
 
 print "Test8' [blocking, lb B (dl A,B)]"
 g = siaTest( [g1, g3, g4, g2], nw )
+print
 
 
 print "Test9 [blocking: dl A,B]"
@@ -177,6 +186,7 @@ g2.es['name'] = ["a"]
 g2.es['weight'] = 1
 
 g = siaTest( [g1, g2], nw )
+print
 
 
 print "Test10 [live]"
@@ -200,6 +210,7 @@ g3.es['name'] = ["b", "c"]
 g3.es['weight'] = 1
 
 g = siaTest( [g1, g2, g3], nw )
+print
 
 print "Test10' [blocking: dl A,B,C]"
 g1 = igraph.Graph(3, [(0,1),(1,2)], True)
