@@ -3,10 +3,9 @@ import igraph
 class Automata( object ):
     """Automata class with basic folding operation"""
 
-    def __init__( self, g, nw, unreachable=False, step=False ):
+    def __init__( self, g, unreachable=False, step=False ):
         self.name = g["name"]
         self.g = g
-        self.nw = nw
         self.g.vs['dl'] = False
         self.unreachable = unreachable
         self.step = step
@@ -36,39 +35,44 @@ class Automata( object ):
             res = res or attr
         return res
 
-    def _fold( self, g, g1, g2, mod, shared ):
+    def _fold( self, g, g1, g2, mod ):
         """fold two graphs together"""
         # self.plot( g1 )
         # self.plot( g2 )
-
+        e_del1 = []
+        e_del2 = []
         # find shared actions
-        for name in shared:
-            for e1 in g1.es( name=name ):
-                for e2 in g2.es( name=name ):
-                    src = self._foldGetVertexId( mod, e1.source, e2.source )
-                    dst = self._foldGetVertexId( mod, e1.target, e2.target )
-                    g.add_edge( src, dst, name=name, mode=';', weight=1,
-                            sys=[g1['name'], g2['name']])
+        for act1 in g1.es:
+            for act2 in g2.es:
+                if( self._isActionShared( act1, act2 ) ):
+                    src = self._foldGetVertexId( mod, act1.source, act2.source )
+                    dst = self._foldGetVertexId( mod, act1.target, act2.target )
+                    g.add_edge( src, dst, name='eps_' + act1['name'], mode=';',
+                            weight=0 )
+                    e_del1.append( act1 )
+                    e_del2.append( act2 )
+
+        # self.plot( g )
+
+        # remove shared actions -> only independant actions are remaing
+        g1.delete_edges( e_del1 )
+        g2.delete_edges( e_del2 )
 
         # find independant actions in g1
         for act in g1.es:
-            if act['name'] in shared:
-                continue
             for idx in range( 0, g2.vcount() ):
                 src = self._foldGetVertexId( mod, act.source, idx )
                 dst = self._foldGetVertexId( mod, act.target, idx )
                 g.add_edge( src, dst, name=act['name'], mode=act['mode'],
-                        sys=[g1['name']], weight=act['weight'] )
+                        weight=act['weight'] )
 
         # find independant actions in g2
         for act in g2.es:
-            if act['name'] in shared:
-                continue
             for idx in range( 0, g1.vcount() ):
                 src = self._foldGetVertexId( mod, idx, act.source )
                 dst = self._foldGetVertexId( mod, idx, act.target )
                 g.add_edge( src, dst, name=act['name'], mode=act['mode'],
-                        sys=[g2['name']], weight=act['weight'] )
+                        weight=act['weight'] )
 
         # self.plot( g )
 
@@ -76,38 +80,54 @@ class Automata( object ):
         """calculate the index of the folded state"""
         return mod * q + r
 
-    def _foldPostprocess( self, g1, g2, g=None, unreachable=False ):
+    def _foldPostprocess( self, g=None, unreachable=False ):
         """operations performed after the folding operation"""
         if g is None:
             g = self.g
             unreachable = self.unreachable
-        g.vs['strength'] = g.strength( g.vs, mode="OUT", weights='weight' )
-        g.vs( strength_eq=0 )['end'] = True
-        self._markBlockingMust( g, g1, g2 )
-        self._markBlockingMay( g, g1, g2 )
+        """operations after folding"""
+        # mark unreachable states
+        g_init = g.vs.find( init=True ).index
+        for v in g.vs.select( init=False ):
+            if g.adhesion( g_init, v.index ) == 0:
+                v['reach'] = False
         if unreachable:
             self.plot( g )
-        # remove unreachable states
+        # remove unreachable and check for progress
+        a_int_all = g.es( mode=';' ).__len__()
         g.delete_vertices( g.vs.select( reach=False ) )
+        a_int_reach = g.es( mode=';' ).__len__()
+        if  a_int_all > 0 and a_int_reach == 0:
+            # no progress with this component -> dl
+            g.vs( init=True )['dl'] = True
+        g.es( mode=';' )['mode']=','
+
+        # mark deadkocks
+        g.vs.select( _outdegree_eq=0, end=False )['dl'] = True
+        g.vs.select( _outdegree_eq=0, end=True, init=True )['dl'] = True
+        self._foldReduce( g )
 
     def _foldPreprocess( self, g, g1, g2 ):
         """operations before folding"""
-        g["name"] = g1["name"] g2["name"]
+        mul = "*"
+        if g1["name"] == "" or g2["name"] == "": mul=""
+        g["name"] = g1["name"] + mul + g2["name"]
         g.add_vertices( g1.vcount() * g2.vcount() )
-        g.vs['reach'] = False
-        g.vs['end'] = False
-        g.vs['block'] = { g1['name']: [], g2['name']: [] }
-        g.vs['blocking'] = False
+        g.vs['reach'] = True
+        g.vs['dl'] = False
+        # mark initial states
+        g.vs['init'] = False
         mod = g2.vcount()
-        # add sub states
-        idx1 = 0
-        idx2 = 0
-        for v in g.vs:
-            v['states'] = { g1['name']: idx1, g2['name']: idx2 }
-            idx2 += 1
-            if idx2 >= mod:
-                idx2 = 0
-                idx1 += 1
+        for v1 in g1.vs.select( init=True ):
+            for v2 in g2.vs.select( init=True ):
+                idx = self._foldGetVertexId( mod, v1.index, v2.index )
+                g.vs( idx )['init'] = True
+        # mark end states
+        g.vs['end'] = False
+        for v1 in g1.vs.select( end=True ):
+            for v2 in g2.vs.select( end=True ):
+                idx = self._foldGetVertexId( mod, v1.index, v2.index )
+                g.vs( idx )['end'] = True
         return mod
 
     def _foldReduce( self, g=None ):
