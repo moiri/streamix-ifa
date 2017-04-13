@@ -63,18 +63,76 @@ def fold( g1, g2, shared ):
     return g
     # self.plot( g )
 
+def foldPropagate( g1, g2, shared ):
+    """fold two graphs together"""
+    # self.plot( g1 )
+    # self.plot( g2 )
+    mod = g2.vcount()
+    g = foldPreprocessPropagate( g1, g2, mod )
+
+    # find shared actions
+    for name in shared:
+        for e1 in g1.es( name=name ):
+            for e2 in g2.es( name=name ):
+                src = getVertexId( mod, e1.source, e2.source )
+                dst = getVertexId( mod, e1.target, e2.target )
+                g.add_edge( src, dst, name=name, mode=';', weight=1,
+                        sys=e1['sys'] + e2['sys'])
+
+    # find independant actions in g1
+    for act in g1.es:
+        if act['name'] in shared:
+            continue
+        for idx in range( 0, g2.vcount() ):
+            src = getVertexId( mod, act.source, idx )
+            dst = getVertexId( mod, act.target, idx )
+            g.add_edge( src, dst, name=act['name'], mode=act['mode'],
+                    sys=act['sys'], weight=act['weight'] )
+
+    # find independant actions in g2
+    for act in g2.es:
+        if act['name'] in shared:
+            continue
+        for idx in range( 0, g1.vcount() ):
+            src = getVertexId( mod, idx, act.source )
+            dst = getVertexId( mod, idx, act.target )
+            g.add_edge( src, dst, name=act['name'], mode=act['mode'],
+                    sys=act['sys'], weight=act['weight'] )
+
+    foldPostprocess( g )
+    return g
+    # self.plot( g )
+
 def foldPreprocess( g1, g2, mod ):
     g = igraph.Graph( g1.vcount()*g2.vcount(), directed=True )
     g['name'] = g1['name'] + g2['name']
     g.vs['reach'] = False
     g.vs['end'] = False
-    g.vs['block'] = { g1['name']: [], g2['name']: [] }
     g.vs['blocking'] = False
 
     idx1 = 0
     idx2 = 0
-    for v in g.vs:
-        v['states'] = { g1['name']: idx1, g2['name']: idx2 }
+    for v in g.vs():
+        v['subsys'] = { g1['name']: { 'state': idx1, 'block': [] },
+                g2['name']: { 'state': idx2, 'block': [] } }
+        idx2 += 1
+        if idx2 >= mod:
+            idx2 = 0
+            idx1 += 1
+
+    return g
+
+def foldPreprocessPropagate( g1, g2, mod ):
+    g = igraph.Graph( g1.vcount()*g2.vcount(), directed=True )
+    g['name'] = g1['name'] + g2['name']
+    g.vs['reach'] = False
+    g.vs['end'] = False
+    g.vs['blocking'] = False
+
+    idx1 = 0
+    idx2 = 0
+    for v in g.vs():
+        v['subsys'] = dict( g1.vs[idx1]['subsys'], **g2.vs[idx2]['subsys'] )
         idx2 += 1
         if idx2 >= mod:
             idx2 = 0
@@ -95,9 +153,27 @@ def foldInc( sys_a, nw ):
         shared = getShared( nw_inc, g, sys )
         nw_inc = abstractGraph( nw_inc, g, sys, shared )
         g_fold = fold( g, sys, shared )
-        markBlockingMust( g_fold, g, sys )
-        markBlockingMay( g_fold, g, sys )
+        markBlockingMust( g_fold, [g, sys] )
+        markBlockingMay( g_fold, [g, sys] )
+        printErrorInc( g_fold, g, sys, shared )
         g = g_fold
+
+    return g
+
+def foldFlat( sys_a, nw ):
+    g = sys_a[0]
+    preProcessPropagate( g )
+    nw_inc = nw.copy()
+    for sys in sys_a[1:]:
+        preProcessPropagate( sys )
+        shared = getShared( nw_inc, g, sys )
+        nw_inc = abstractGraph( nw_inc, g, sys, shared )
+        g_fold = foldPropagate( g, sys, shared )
+        g = g_fold
+
+    markBlockingMust( g, sys_a )
+    markBlockingMay( g, sys_a )
+    printErrorFlat( g, nw )
 
     return g
 
@@ -111,8 +187,10 @@ def abstractGraph( nw, g1, g2, shared ):
         membership.insert( idx2, idx1 )
 
     cluster = igraph.VertexClustering( nw, membership )
-    g = cluster.cluster_graph( combine_vertices=concatString, combine_edges=False )
-    g.delete_edges( g.es( label_in=shared ) )
+    g = cluster.cluster_graph( combine_vertices=concatString,
+            combine_edges=False )
+    if g.ecount() > 0:
+        g.delete_edges( g.es( label_in=shared ) )
     return g
 
 def concatString( attrs ):
@@ -129,10 +207,82 @@ def getShared( nw, g1, g2 ):
         shared.append( e['label'] )
     return shared
 
-def printError( nameSub, stateSub, name, state ):
-    print " error: permanent blocking of system " + nameSub \
-            + " in state " + str( stateSub ) + " (system " + name \
-            + " in state " + str( state ) + ")"
+def printErrorInc( g, g1, g2, shared ):
+    block1 = False
+    block2 = False
+    for v in g.vs( blocking=True ):
+        printErrorFold( g['name'], v.index )
+        info = v['subsys'][g1['name']]
+        if len( info['block'] ) > 0:
+            printErrorSub( g1['name'], info['state'], info['block'] )
+            block1 = True
+        info = v['subsys'][g2['name']]
+        if len( info['block'] ) > 0:
+            printErrorSub( g2['name'], info['state'], info['block'] )
+            block2 = True
+
+        if block1 and block2:
+            printErrorDl( [g1['name'], g2['name']] )
+        elif block1:
+            printErrorLb( g1['name'] )
+        elif block2:
+            printErrorLb( g2['name'] )
+
+def printErrorFlat( g, nw ):
+    for v in g.vs( blocking=True ):
+        printErrorFold( g['name'], v.index )
+        lib = {}
+        for name, sys in v['subsys'].iteritems():
+            if len( sys['block'] ) > 0:
+                last_name = name
+                printErrorSub( name, sys['state'], sys['block'] )
+                lib[name] = getDependency( nw, name, sys['block'] )
+
+        dl = []
+        if isDeadlock( lib, lib[last_name], last_name, dl ):
+            printErrorDl( dl )
+        else:
+            for name in lib:
+                printErrorLb( name )
+
+def isDeadlock( lib, deps, start, dl ):
+    for dep in deps:
+        dl.append( dep )
+        if dep == start:
+            return True
+        if dep not in lib:
+            return False
+        return isDeadlock( lib, lib[dep], start, dl )
+
+def getDependency( nw, name, actions ):
+    dependency = []
+    for e in nw.es( label_in=actions ):
+        dst = nw.vs[e.target]['label']
+        src = nw.vs[e.source]['label']
+        if dst == name and src not in dependency:
+            dependency.append( src )
+        elif src == name and dst not in dependency:
+            dependency.append( dst )
+
+    return dependency
+
+def printErrorFold( name, state ):
+    print " permanent blocking of system " + name + " in state " \
+            + str( state ) + ":"
+
+def printErrorSub( name, state, actions ):
+    print "  " + name + " is blocking in state " + str( state ) \
+            + " on actions " + str( actions )
+
+def printErrorDl( name_a ):
+    str = "  => system "
+    for name in name_a[:-1]:
+        str += name + " and "
+    str += name_a[-1] + " are deadlocking"
+    print str
+
+def printErrorLb( name ):
+    print "  => system " + name + " is lonely blocking"
 
 def markBlocking( v, g, g_sys_a, must ):
     hasAction = [False] * len( g_sys_a )
@@ -149,32 +299,32 @@ def markBlocking( v, g, g_sys_a, must ):
         hasActionRes = markBlocking( e.target, g, g_sys_a, must )
         hasAction = [x or y for ( x, y ) in zip( hasAction, hasActionRes )]
 
-    sSubsys = g.vs[v]['states']
-    bSubsys = g.vs[v]['block']
+    subSys = g.vs[v]['subsys']
     for idx, g_sys in enumerate( g_sys_a ):
-        if must or len( bSubsys[g_sys['name']] ) == 0:
+        sys = subSys[g_sys['name']]
+        if must or len( sys['block'] ) == 0:
             if ( g.vs[v]['strength'] == 0 or not hasAction[idx] ) \
-                    and not g_sys.vs[sSubsys[g_sys['name']]]['end']:
-                printError( g_sys['name'], sSubsys[g_sys['name']], g['name'], v )
-                bSubsys[g_sys['name']] = getActions( g_sys, sSubsys[g_sys['name']] )
-                # print bSubsys[g_sys['name']]
+                    and not g_sys.vs[sys['state']]['end']:
+                sys['block'] = getActions( g_sys, sys['state'] )
                 g.vs[v]['blocking'] = True
     return hasAction
 
 def getActions( g, v ):
     names = []
     for e in g.es( g.incident(v) ):
+        if e['weight'] == 0:
+            continue
         names.append( e['name'] )
 
     return names
 
-def markBlockingMust( g, g1, g2 ):
+def markBlockingMust( g, g_a ):
     g.vs['reach'] = False
-    markBlocking( 0, g, [g1, g2], True )
+    markBlocking( 0, g, g_a, True )
 
-def markBlockingMay( g, g1, g2 ):
+def markBlockingMay( g, g_a ):
     g.vs['reach'] = False
-    markBlocking( 0, g, [g1, g2], False )
+    markBlocking( 0, g, g_a, False )
 
 def preProcess( g ):
     g.vs['end'] = False
@@ -183,42 +333,8 @@ def preProcess( g ):
     g.vs( strength_eq=0 )['end'] = True
     # plot(g)
 
-def checkSys( g1, g2, shared, debug=False ):
-    g = fold( g1, g2, shared )
-    preProcess( g1 )
-    preProcess( g2 )
-    markBlockingMust( g, g1, g2 )
-    markBlockingMay( g, g1, g2 )
-    g.delete_vertices( g.vs.select( reach=False ) )
-    if debug > 1:
-        plot(g1)
-        plot(g2)
-    if debug > 0: plot(g)
-    del g.vs['reach']
-    del g.vs['end']
-    del g.vs['block']
-    return g
-
-def checkSysFlat( sys_a, nw, debug=False ):
-    if len( sys_a ) < 2:
-        return
-
-    g = sys_a[0]
-    internal = []
-    for sys in sys_a[1:]:
-        preProcess( sys )
-        shared = getShared( nw, g, sys, internal )
-        g = fold( g, sys, shared )
-        internal.append( shared )
-
-    markBlockingMust( 0, g, g1, g2 )
-    markBlockingMay( 0, g, g1, g2 )
-    g.delete_vertices( g.vs.select( reach=False ) )
-    if debug > 1:
-        plot(g1)
-        plot(g2)
-    if debug > 0: plot(g)
-    del g.vs['reach']
-    del g.vs['end']
-    del g.vs['block']
-    return g
+def preProcessPropagate( g ):
+    preProcess( g )
+    for v in g.vs():
+        v['subsys'] = { g['name']: { 'state': v.index, 'block': [] } }
+    g.es['sys'] = [g['name']]
