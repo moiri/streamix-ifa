@@ -59,7 +59,7 @@ def fold( g1, g2, shared, prop=False ):
             g.add_edge( src, dst, name=act['name'], mode=act['mode'],
                     sys=setEdgeAttrSys( g2, act, prop ), weight=act['weight'] )
 
-    foldPostprocess( g )
+    foldPostprocess( g, g1, g2, shared, prop )
     return g
     # self.plot( g )
 
@@ -101,40 +101,33 @@ def foldPreprocess( g1, g2, mod, prop=False ):
 
     return g
 
-def foldPostprocess( g ):
+def foldPostprocess( g, g1, g2, shared, prop=False ):
     g.vs['strength'] = g.strength( g.vs, mode="OUT", weights='weight' )
+    if prop:
+        markReach( g )
+    else:
+        markBlockingMust( g, [g1, g2] )
+        markBlockingMay( g, [g1, g2] )
+        printErrorInc( g, g1, g2, shared )
+    g.delete_vertices( g.vs.select( reach=False ) )
 
-def foldInc( sys_a, nw ):
+def foldRec( sys_a, nw, prop=False ):
     g = sys_a[0]
-    preProcess( g )
+    preProcess( g, prop )
     nw_inc = nw.copy()
     for sys in sys_a[1:]:
-        preProcess( sys )
+        preProcess( sys, prop )
         shared = getShared( nw_inc, g, sys )
         nw_inc = abstractGraph( nw_inc, g, sys, shared )
-        g_fold = fold( g, sys, shared )
-        markBlockingMust( g_fold, [g, sys] )
-        markBlockingMay( g_fold, [g, sys] )
-        printErrorInc( g_fold, g, sys, shared )
-        g = g_fold
-        g.delete_vertices( g.vs.select( reach=False ) )
-        # igraph.plot(nw_inc)
-        # plot(g)
+        g = fold( g, sys, shared, prop )
 
     return g
 
+def foldInc( sys_a, nw ):
+    return foldRec( sys_a, nw, False )
+
 def foldFlat( sys_a, nw ):
-    g = sys_a[0]
-    preProcess( g, True )
-    nw_inc = nw.copy()
-    for sys in sys_a[1:]:
-        preProcess( sys, True )
-        shared = getShared( nw_inc, g, sys )
-        nw_inc = abstractGraph( nw_inc, g, sys, shared )
-        g_fold = fold( g, sys, shared, True )
-        g = g_fold
-        markReach( g )
-        g.delete_vertices( g.vs.select( reach=False ) )
+    g = foldRec( sys_a, nw, True )
 
     markBlockingMust( g, sys_a )
     markBlockingMay( g, sys_a )
