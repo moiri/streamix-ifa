@@ -2,6 +2,8 @@
 
 import igraph
 
+ident = ""
+
 def plot( g=None, layout="auto" ):
     """plot the graph"""
     g.vs['color'] = "grey"
@@ -119,7 +121,10 @@ def foldRec( sys_a, nw, prop=False ):
         preProcess( sys, prop )
         shared = getShared( nw_inc, g, sys )
         nw_inc = abstractGraph( nw_inc, g, sys, shared )
+        # plot(g)
+        # plot(sys)
         g = fold( g, sys, shared, prop )
+        # plot(g)
 
     return g
 
@@ -252,20 +257,29 @@ def markReach( g, v=0 ):
 
     return
 
-def markBlocking( v, g, g_sys_a, must ):
-    hasAction = [False] * len( g_sys_a )
+
+
+def markBlocking( v, g, g_sys_a, hasAction, must ):
+    global ident
+    # hasAction = [False] * len( g_sys_a )
     if g.vs[v]['reach']:
         return hasAction
     g.vs[v]['reach'] = True
+    # print ident + "checking state " + str(v) + " of SIA '" + g['name'] + "'"
 
     for e in g.es( g.incident(v) ):
         if must and e['weight'] == 0:
             continue
         for idx, g_sys in enumerate( g_sys_a ):
+            # print ident + " checking action '" + e['name'] + "' of SIA '" + g_sys['name'] + "' (" + str(e['sys']) + ")"
             if g_sys['name'] in e['sys']:
                 hasAction[idx] = True
-        hasActionRes = markBlocking( e.target, g, g_sys_a, must )
+
+        ident += ">"
+        hasActionRes = markBlocking( e.target, g, g_sys_a, hasAction, must )
+        ident = ident[:-1]
         hasAction = [x or y for ( x, y ) in zip( hasAction, hasActionRes )]
+        # print ident + "HasAction: " + str(hasAction)
 
     subSys = g.vs[v]['subsys']
     for idx, g_sys in enumerate( g_sys_a ):
@@ -275,6 +289,8 @@ def markBlocking( v, g, g_sys_a, must ):
                     and not g_sys.vs[sys['state']]['end']:
                 sys['block'] = getActions( g_sys, sys['state'] )
                 g.vs[v]['blocking'] = True
+                # printErrorSub( g_sys['name'], sys['state'], sys['block'] )
+                # print ident + "!!!!!!!!!!: " + g_sys['name'] + " " + str(hasAction[idx])
     return hasAction
 
 def getActions( g, v ):
@@ -288,11 +304,13 @@ def getActions( g, v ):
 
 def markBlockingMust( g, g_a ):
     g.vs['reach'] = False
-    markBlocking( 0, g, g_a, True )
+    hasAction = [False] * len( g_a )
+    markBlocking( 0, g, g_a, hasAction, True )
 
 def markBlockingMay( g, g_a ):
     g.vs['reach'] = False
-    markBlocking( 0, g, g_a, False )
+    hasAction = [False] * len( g_a )
+    markBlocking( 0, g, g_a, hasAction, False )
 
 def preProcess( g, prop=False ):
     g.vs['end'] = False
