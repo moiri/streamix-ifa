@@ -116,12 +116,13 @@ def foldPostprocess( g, g1, g2, shared, prop=False ):
 def foldRec( sys_a, nw, prop=False ):
     g = sys_a[0]
     preProcess( g, prop )
+    # plot(g)
     nw_inc = nw.copy()
     for sys in sys_a[1:]:
         preProcess( sys, prop )
         shared = getShared( nw_inc, g, sys )
         nw_inc = abstractGraph( nw_inc, g, sys, shared )
-        # plot(g)
+        # igraph.plot(nw_inc)
         # plot(sys)
         g = fold( g, sys, shared, prop )
         # plot(g)
@@ -129,9 +130,11 @@ def foldRec( sys_a, nw, prop=False ):
     return g
 
 def foldInc( sys_a, nw ):
+    # igraph.plot(nw)
     return foldRec( sys_a, nw, False )
 
 def foldFlat( sys_a, nw ):
+    # igraph.plot(nw)
     g = foldRec( sys_a, nw, True )
 
     markBlockingMust( g, sys_a )
