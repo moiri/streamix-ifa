@@ -1,16 +1,20 @@
 #!/usr/bin/env python
 
 import igraph
-
+from collections import deque
 ident = ""
 
 def plot( g=None, layout="auto" ):
     """plot the graph"""
     g.vs['color'] = "grey"
     g.vs[0]['shape'] = "triangle"
+    g.vs[0]['color'] = "yellow"
     g.vs( blocking=True )['color'] = "red"
     g.vs( end=True )['shape'] = "diamond"
     g.vs['label'] = [ v.index for v in g.vs ]
+    g.es( mode='?')['color']="blue"
+    g.es( mode='!')['color']="green"
+    g.es( mode=';')['color']="grey"
     if g.ecount() > 0:
         g.es['label'] = [ n + m for n, m in zip( g.es['name'], g.es['mode'] ) ]
         g.es( weight=0 )['color'] = "blue"
@@ -112,6 +116,7 @@ def foldPostprocess( g, g1, g2, shared, prop=False ):
         markBlockingMay( g, [g1, g2] )
         printErrorInc( g, g1, g2, shared )
     g.delete_vertices( g.vs.select( reach=False ) )
+    g.vs( strength_eq=0, blocking=False )['end'] = True
 
 def foldRec( sys_a, nw, prop=False ):
     g = sys_a[0]
@@ -131,7 +136,10 @@ def foldRec( sys_a, nw, prop=False ):
 
 def foldInc( sys_a, nw ):
     # igraph.plot(nw)
-    return foldRec( sys_a, nw, False )
+    g = foldRec( sys_a, nw, False )
+    # plot(g)
+
+    return g
 
 def foldFlat( sys_a, nw ):
     # igraph.plot(nw)
@@ -140,6 +148,7 @@ def foldFlat( sys_a, nw ):
     markBlockingMust( g, sys_a )
     markBlockingMay( g, sys_a )
     printErrorFlat( g, nw )
+    # plot(g)
 
     return g
 
@@ -174,9 +183,9 @@ def getShared( nw, g1, g2 ):
     return shared
 
 def printErrorInc( g, g1, g2, shared ):
-    block1 = False
-    block2 = False
     for v in g.vs( blocking=True ):
+        block1 = False
+        block2 = False
         printErrorFold( g['name'], v.index )
         info = v['subsys'][g1['name']]
         if len( info['block'] ) > 0:
@@ -204,16 +213,34 @@ def printErrorFlat( g, nw ):
                 printErrorSub( name, sys['state'], sys['block'] )
                 lib[name] = getDependency( nw, name, sys['block'] )
 
+
         dl = []
-        if isDeadlock( lib, lib[last_name], last_name, dl ):
-            printErrorDl( dl )
-        else:
-            for name in lib:
-                printErrorLb( name )
+        for start, deps in lib.iteritems():
+            cycle = []
+            if isDeadlock( lib, lib[start], start, cycle ):
+                if not isDuplicate( dl, cycle ):
+                    dl.append( cycle )
+                    printErrorDl( cycle )
+            else:
+                printErrorLb( start )
+
+def isDuplicate( dl, cycle ):
+    items = deque( cycle )
+    for elem in dl:
+        if len( elem ) != len( cycle ):
+            continue
+        if elem == cycle:
+            return True
+        for i in range( 1, len( elem ) ):
+            items.rotate(1)
+            if elem == list(items):
+                return True
 
 def isDeadlock( lib, deps, start, dl ):
     for dep in deps:
-        dl.append( dep )
+        if dep in dl:
+            return False
+        dl.append(dep)
         if dep == start:
             return True
         if dep not in lib:
@@ -259,8 +286,6 @@ def markReach( g, v=0 ):
         markReach( g, e.target )
 
     return
-
-
 
 def markBlocking( v, g, g_sys_a, hasAction, must ):
     global ident

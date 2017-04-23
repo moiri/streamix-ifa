@@ -352,8 +352,10 @@ g4.es['name'] = ["si","s","e","eo"]
 g4.es['weight'] = 1
 g5 = igraph.Graph(8, [(0,1),(1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(7,0)], True)
 g5['name'] = "ENV"
-g5.es['mode'] = ["!", "?", "!", "?", "!", "?", "!", "?"]
-g5.es['name'] = ["wi","wo","ni","no","ei","eo","si","so"]
+# g5.es['mode'] = ["!", "?", "!", "?", "!", "?", "!", "?"]
+g5.es['mode'] = ["!", "!", "!", "!", "?", "?", "?", "?"]
+# g5.es['name'] = ["wi","wo","ni","no","ei","eo","si","so"]
+g5.es['name'] = ["wi","ni","ei","si","wo","no","eo","so"]
 g5.es['weight'] = 1
 
 g = siaTest( [g1, g2, g3, g4, g5], nw )
@@ -420,3 +422,112 @@ g5.es['name'] = ["wi","ni","ei","si"]
 g5.es['weight'] = 1
 
 g = siaTest( [g1, g2, g3, g4, g5], nw )
+print
+
+
+print "Test12'' [live]"
+nw = igraph.Graph( 6, [(0,1),(1,2),(2,3),(0,3),(4,0),(4,1),(4,2),(4,0)], True )
+nw.es['label'] =       ["w",  "n",  "e",  "s", "wi", "ni", "ei", "si"]
+nw.vs['label'] = ["NW'", "NE", "SE", "SW'", "ENV1"]
+g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+g1['name'] = "NW'"
+g1.es['mode'] = ["?","!","?","!"]
+g1.es['name'] = ["wi","w","si","s"]
+g1.es['weight'] = 1
+g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+g2['name'] = "NE"
+g2.es['mode'] = ["?","!","?","!"]
+g2.es['name'] = ["ni","n","w","wo"]
+g2.es['weight'] = 1
+g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+g3['name'] = "SE"
+g3.es['mode'] = ["?","!","?","!"]
+g3.es['name'] = ["ei","e","n","no"]
+g3.es['weight'] = 1
+g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+g4['name'] = "SW'"
+g4.es['mode'] = ["?","!","?","!"]
+g4.es['name'] = ["s","so","e","eo"]
+g4.es['weight'] = 1
+g5 = igraph.Graph(4, [(0,1),(1,2),(2,3),(3,0)], True)
+g5['name'] = "ENV1"
+g5.es['mode'] = ["!","!","!","!"]
+g5.es['name'] = ["wi","ni","ei","si"]
+g5.es['weight'] = 1
+
+g = siaTest( [g1, g2, g3, g4, g5], nw )
+print
+
+
+print "Test12''' [live]"
+nw = igraph.Graph( 6, [(0,1),(1,2),(2,3),(0,3),(4,0),(4,1),(4,2),(4,0),(1,5),(2,5),(3,5),(3,5)], True )
+nw.es['label'] =       ["w",  "n",  "e",  "s", "wi", "ni", "ei", "si", "wo", "no", "eo", "so"]
+nw.vs['label'] = ["NW'", "NE", "SE", "SW'", "ENV1", "ENV2"]
+g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+g1['name'] = "NW'"
+g1.es['mode'] = ["?","!","?","!"]
+g1.es['name'] = ["wi","w","si","s"]
+g1.es['weight'] = 1
+g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+g2['name'] = "NE"
+g2.es['mode'] = ["?","!","?","!"]
+g2.es['name'] = ["ni","n","w","wo"]
+g2.es['weight'] = 1
+g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+g3['name'] = "SE"
+g3.es['mode'] = ["?","!","?","!"]
+g3.es['name'] = ["ei","e","n","no"]
+g3.es['weight'] = 1
+g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+g4['name'] = "SW'"
+g4.es['mode'] = ["?","!","?","!"]
+g4.es['name'] = ["s","so","e","eo"]
+g4.es['weight'] = 1
+g5 = igraph.Graph(4, [(0,1),(1,2),(2,3),(3,0)], True)
+g5['name'] = "ENV1"
+g5.es['mode'] = ["!","!","!","!"]
+g5.es['name'] = ["si","wi","ei","ni"]
+g5.es['weight'] = 1
+g6 = igraph.Graph(4, [(0,1),(1,2),(2,3),(3,0)], True)
+g6['name'] = "ENV2"
+g6.es['mode'] = ["?","?","?","?"]
+g6.es['name'] = ["wo","no","eo","so"]
+g6.es['weight'] = 1
+
+g = siaTest( [g1, g2, g3, g4, g5, g6], nw )
+print
+
+print "Test12'''' [live]"
+nw = igraph.Graph( 6, [(0,1),(1,2),(2,3),(0,3),(4,0),(4,1),(4,2),(4,0),(1,4),(2,4),(3,4),(3,4)], True )
+nw.es['label'] =       ["w",  "n",  "e",  "s", "wi", "ni", "ei", "si", "wo", "no", "eo", "so"]
+nw.vs['label'] = ["NW'", "NE", "SE", "SW'", "ENV"]
+g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+g1['name'] = "NW'"
+g1.es['mode'] = ["?","!","?","!"]
+g1.es['name'] = ["wi","w","si","s"]
+g1.es['weight'] = 1
+g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+g2['name'] = "NE"
+g2.es['mode'] = ["?","!","?","!"]
+g2.es['name'] = ["ni","n","w","wo"]
+g2.es['weight'] = 1
+g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+g3['name'] = "SE"
+g3.es['mode'] = ["?","!","?","!"]
+g3.es['name'] = ["ei","e","n","no"]
+g3.es['weight'] = 1
+g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+g4['name'] = "SW'"
+g4.es['mode'] = ["?","!","?","!"]
+g4.es['name'] = ["s","so","e","eo"]
+g4.es['weight'] = 1
+g5 = igraph.Graph(8, [(0,1),(1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(7,0)], True)
+g5['name'] = "ENV"
+g5.es['mode'] = ["!", "?", "!", "?", "!", "?", "!", "?"]
+# g5.es['mode'] = ["!", "!", "!", "!", "?", "?", "?", "?"]
+g5.es['name'] = ["wi","wo","ni","no","ei","eo","si","so"]
+# g5.es['name'] = ["wi","ni","ei","si","wo","no","eo","so"]
+g5.es['weight'] = 1
+
+g = siaTest( [g1, g2, g3, g4, g5], nw )
+print
