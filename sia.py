@@ -11,7 +11,7 @@ class Sia( object ):
         self._init_attr()
         self._mark_end()
         for v in self.g.vs():
-            v['subsys'] = { g['name']: { 'state': v.index, 'block': [] } }
+            v['subsys'] = { g['name']: v.index }
         sys = []
         sys.append( g['name'] )
         for e in self.g.es:
@@ -113,8 +113,6 @@ class SiaFold( Sia ):
                     attr_mode.append( ';' )
                     attr_weight.append( 1 )
                     attr_sys.append( e1['sys'] + e2['sys'] )
-                    # self.g.add_edge( src, dst, name=name, mode=';', weight=1,
-                    #         sys=e1['sys'] + e2['sys'] )
 
         # find independant actions in g1
         for act in g1.es:
@@ -128,8 +126,6 @@ class SiaFold( Sia ):
                 attr_mode.append( act['mode'] )
                 attr_weight.append( act['weight'] )
                 attr_sys.append( act['sys'] )
-                # self.g.add_edge( src, dst, name=act['name'], mode=act['mode'],
-                #         sys=act['sys'], weight=act['weight'] )
         e_start = self.g.ecount()
 
         # find independant actions in g2
@@ -144,8 +140,6 @@ class SiaFold( Sia ):
                 attr_mode.append( act['mode'] )
                 attr_weight.append( act['weight'] )
                 attr_sys.append( act['sys'] )
-                # self.g.add_edge( src, dst, name=act['name'], mode=act['mode'],
-                #         sys=act['sys'], weight=act['weight'] )
 
         self.g.add_edges( es )
         self.g.es[e_start:]['name'] = attr_name
@@ -167,15 +161,6 @@ class SiaFold( Sia ):
             for v2 in g2.vs:
                 idx = self._get_vertex_id( v1.index, v2.index )
                 g.vs[idx]['subsys'] = dict( v1['subsys'], **v2['subsys'] )
-
-        # to my future self: can't do it like that because some systems do not
-        # have end states. -> if a non-ned state system is folded with an
-        # end state system, we would detect a blocking
-
-        # for v1 in g1.vs.select( end=True ):
-        #     for v2 in g2.vs.select( end=True ):
-        #         idx = self._get_vertex_id( mod, v1.index, v2.index )
-        #         g.vs( idx )['end'] = True
 
     def set_name( self, name ):
         self.name = name
@@ -233,7 +218,20 @@ class Pnsc( object ):
         for v in self.sia.g.vs:
             v['action'] = dict( hasAction )
         self._unfold()
-        self._update_blocking_info()
+        self._set_blocking_info()
+        self._separate_blocker()
+
+    def _get_dependency( self, name, actions ):
+        nw = self.nw
+        dependency = []
+        for e in nw.es( label_in=actions ):
+            dst = nw.vs[e.target]['label']
+            src = nw.vs[e.source]['label']
+            if dst == name and src not in dependency:
+                dependency.append( src )
+            elif src == name and dst not in dependency:
+                dependency.append( dst )
+        return dependency
 
     def _get_shared( self, nw, name1, name2 ):
         shared = []
@@ -244,6 +242,39 @@ class Pnsc( object ):
 
     def _select_undecided( self, v ):
         return v['end'] or not v['ok']
+
+    def _separate_blocker( self ):
+        blockers = self.get_blocker_info()
+        v_cnt = 0
+        vs = []
+        es = []
+        for blocker in blockers:
+            actions = []
+            if blocker not in vs:
+                vs.append( blocker )
+            for state in blockers[blocker]:
+                actions += blockers[blocker][state]['actions']
+            deps = self._get_dependency( blocker, actions )
+            for dep in deps:
+                if dep not in vs:
+                    vs.append( dep )
+                es.append( (blocker, dep) )
+
+        self.g_wait = igraph.Graph( directed=True )
+        self.g_wait.add_vertices( vs )
+        self.g_wait.add_edges( es )
+        # igraph.plot( self.g_wait )
+
+    def _set_blocking_info( self ):
+        self.blocker_info = {}
+        for v in self.sia.g.vs.select( self._select_undecided ):
+            for idx, sys in enumerate( self.systems ):
+                state = v['subsys'][sys.name]
+                if ( ( v['end'] or not v['action'][sys.name] )
+                        and not sys.g.vs[state]['end'] ):
+                    v['blocking'] = True
+                    self._update_blocker_info( v.index, sys.name, state,
+                            sys.get_actions( state ) )
 
     def _tree_propagate_info_( self ):
         g = self.sia.g
@@ -344,47 +375,9 @@ class Pnsc( object ):
                     vt_changed )
 
     def _unfold( self, deep=False ):
-        if deep:
-            self._unfold_dfs()
-        else:
-            self._unfold_bfs()
-            self._tree_propagate_info()
-            self._tree_iterate_info()
-
-    def _unfold_bfs_( self, vs=[0], v_start=0 ):
-        g = self.sia.g
-        g_tree = self.g_tree
-        vs_next = []
-        for v_idx, v in enumerate( vs ):
-            # print "check " + str(v)
-            tree_idx = len( self.mapping )
-            if g.vs[v]['end']:
-                g_tree.vs[tree_idx]['end'] = True
-            if v in self.mapping:
-                self.mapping.append( v )
-                if not g_tree.vs[tree_idx]['end']:
-                    g_tree.vs[tree_idx]['cycle'] = True
-                continue
-            self.mapping.append( v )
-            es = g.es.select( _source_eq=v )
-            e_start = g_tree.vcount()
-            g_tree.add_vertices( len( es ) )
-            for e_idx, e in enumerate( es ):
-                # print "found " + str( e.target )
-                v_target = g.vs[e.target]
-                # print v_target['action']
-                for sys in e['sys']:
-                    v_target['action'][sys] = True
-                v_target['ok'] = all( [v_target['action'][sys] for sys in v_target['action']])
-                # print ">" + str((v_target.index, v_target['action']))
-
-                vs_next.append( e.target )
-                g_tree.add_edge( v_start + v_idx, e_start + e_idx, weight=e['weight'], sys=e['sys'] )
-                # print "add edge " + str( v_start + v_idx ) + "->" + str(e_start + e_idx )
-                # print "         " + str( v ) + "->" + str(e.target )
-
-        if len( vs_next ) > 0:
-            self._unfold_bfs( vs_next, v_start + v_idx + 1 )
+        self._unfold_bfs()
+        self._tree_propagate_info()
+        self._tree_iterate_info()
 
     def _unfold_bfs( self, vs=[0], v_start=0 ):
         self.g_tree = igraph.Graph( directed=True )
@@ -418,78 +411,20 @@ class Pnsc( object ):
         if len( vs_next ) > 0:
             self._unfold_bfs_step( i_tree, vs_next, v_start + v_idx + 1 )
 
-    def _unfold_dfs( self ):
-        hasAction = {}
-        self.mapping.append( 0 )
-        for sys in self.systems:
-            hasAction[sys.name] = False
-        et = []
-        self.vt_cnt = self.g_tree.vcount()
-        hasAction = self._unfold_dfs_step( 0, [], hasAction, et )
-        for sys in hasAction:
-            self.sia.g.vs[0]['action'][sys] |= hasAction[sys]
-        print self.sia.g.vcount()
-        print self.vt_cnt
-        self.g_tree.add_vertices( self.vt_cnt )
-        self.g_tree.add_edges( et )
-
-    def _unfold_dfs_step( self, v, seq, hasAction, et ):
-        g = self.sia.g
-        g_tree = self.g_tree
-        v_start = len( self.mapping ) - 1
-        # v_g_tree = g_tree.vs[v_start]
-        # if all( val for val in hasAction.values() ):
-        #     v_g_tree['ok'] = True
-        # print str(seq) + " + " + str( v )
-        if v in seq:
-            # v_g_tree['cycle'] = True
-            return hasAction
-        # print "check " + str(v)
-        seq.append( v )
-        # es = g.es.select( _source_eq=v )
-        resHasActions = []
-        for e in g.es( g.incident( v ) ):
-            locHasAction = dict( hasAction )
-            e_start = self.vt_cnt
-            self.vt_cnt += 1
-            # print self.vt_cnt
-            # print "found " + str( e.target )
-            # print "et1: " + str(et)
-            # print "elem: " + str((v_start, e_start))
-            et.append((v_start, e_start))
-            # print "et2: " + str(et)
-            # g_tree.add_edge( v_start, e_start )
-            self.mapping.append( e.target )
-            for sys in e['sys']:
-                locHasAction[sys] = True
-            # print "add edge " + str( v_start ) + "->" + str( e_start )
-            # print "         " + str( v ) + "->" + str( e.target )
-            resHasAction = self._unfold_dfs_step( e.target, seq, locHasAction, et )
-            if e['weight'] > 0:
-                resHasActions.append( resHasAction )
-        v_rm = seq.pop()
-        # print str( seq ) + " - " + str( v_rm )
-        for resHasAction in resHasActions:
-            for sys in resHasAction:
-                hasAction[sys] |= resHasAction[sys]
-                g.vs[v]['action'][sys] |= resHasAction[sys]
-        # if all( val for val in hasAction.values() ):
-        #     v_g_tree['ok'] = True
-        return hasAction
-
-    def _update_blocking_info( self ):
-        self.blocker_info = []
-        for v in self.sia.g.vs.select( self._select_undecided ):
-            for idx, sys in enumerate( self.systems ):
-                info = v['subsys'][sys.name]
-                if ( ( v['end'] or not v['action'][sys.name] )
-                        and not sys.g.vs[info['state']]['end'] ):
-                    v['blocking'] = True
-                    info['block'] = sys.get_actions( info['state'] )
-                    if ( len( info['block'] ) > 0 ):
-                        self.blocker_info.append( { sys.name: info } )
-            if v['blocking']:
-                print v['subsys']
+    def _update_blocker_info( self, state_pnsc, name, state, actions ):
+        if len( actions ) == 0: return
+        if name not in self.blocker_info:
+            self.blocker_info[name] = { state:
+                    { 'actions': actions, 'states': [state_pnsc] } }
+        elif state not in self.blocker_info[name]:
+            self.blocker_info[name][state] = { 'actions': actions,
+                    'states': [state_pnsc] }
+        else:
+            if state_pnsc not in self.blocker_info[name][state]['states']:
+                self.blocker_info[name][state]['states'].append( state_pnsc )
+            for action in actions:
+                if action not in self.blocker_info[name][state]['actions']:
+                    self.blocker_info[name][state]['actions'].append( action )
 
     def get_blocker( self ):
         """get a list of blocking system names"""
@@ -497,10 +432,9 @@ class Pnsc( object ):
             return self.blocker
         info = self.get_blocker_info()
         blocker = []
-        for elem in info:
-            for sys in elem:
-                if sys not in blocker:
-                    blocker.append( sys )
+        for sys in info:
+            if sys not in blocker:
+                blocker.append( sys )
         self.blocker = blocker
         return blocker
 
@@ -516,18 +450,6 @@ class Pnsc( object ):
         block_cnt = len( self.sia.g.vs( blocking=True ) )
         return ( block_cnt > 0 )
 
-    def getDependency( nw, name, actions ):
-        dependency = []
-        for e in nw.es( label_in=actions ):
-            dst = nw.vs[e.target]['label']
-            src = nw.vs[e.source]['label']
-            if dst == name and src not in dependency:
-                dependency.append( src )
-            elif src == name and dst not in dependency:
-                dependency.append( dst )
-
-        return dependency
-
     def fold( self ):
         sia1 = self.systems[0]
         nw_inc = self.nw.copy()
@@ -540,16 +462,8 @@ class Pnsc( object ):
 
         self.nw_abst = nw_inc
         self.sia = sia
-        # self.sia.plot(x=2000,y=2000)
-        # print self.sia.g.vcount()
-        # for v in self.sia.g.vs:
-        #     neig = []
-        #     for vn in v.neighbors( mode="OUT" ):
-        #         neig.append(vn.index)
-        #     print (v.index, neig)
-
-
         self._analyse_blocking()
+        # self.sia.plot()
         # self.plot_tree(x=2000,y=1000)
 
         return sia
