@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import igraph
+import igraph, time
 from collections import deque
 ident = ""
 
@@ -36,6 +36,10 @@ class Sia( object ):
         for e in self.g.es( self.g.incident(v) ):
             self._mark_reach( e.target )
         return
+
+    def delete_unreachable( self ):
+        self._mark_reach()
+        self.g.delete_vertices( self.g.vs.select( reach=False ) )
 
     def get_actions( self, v ):
         names = []
@@ -73,14 +77,9 @@ class Sia( object ):
         if g.ecount() > 0:
             del g.es['label']
 
-    def delete_unreachable( self ):
-        self._mark_reach()
-        self.g.delete_vertices( self.g.vs.select( reach=False ) )
-
 
 class SiaFold( Sia ):
     def __init__( self, sia1, sia2, shared ):
-        self.name = sia1.name + sia2.name
         self.mod = sia2.g.vcount()
         self.g = igraph.Graph( sia1.g.vcount()*sia2.g.vcount(), directed=True )
         self._init_attr()
@@ -88,6 +87,7 @@ class SiaFold( Sia ):
         self._fold( sia1.g, sia2.g, shared )
         self.delete_unreachable()
         self._mark_end()
+        self.set_name( sia1.name + sia2.name )
 
     def _fold( self, g1, g2, shared ):
         """fold two graphs together"""
@@ -96,14 +96,25 @@ class SiaFold( Sia ):
         # self.plot( g1 )
         # self.plot( g2 )
 
+        es = []
+        attr_name = []
+        attr_mode = []
+        attr_weight = []
+        attr_sys = []
+
         # find shared actions
         for name in shared:
             for e1 in g1.es( name=name ):
                 for e2 in g2.es( name=name ):
                     src = self._get_vertex_id( e1.source, e2.source )
                     dst = self._get_vertex_id( e1.target, e2.target )
-                    self.g.add_edge( src, dst, name=name, mode=';', weight=1,
-                            sys=e1['sys'] + e2['sys'] )
+                    es.append( (src, dst) )
+                    attr_name.append( name )
+                    attr_mode.append( ';' )
+                    attr_weight.append( 1 )
+                    attr_sys.append( e1['sys'] + e2['sys'] )
+                    # self.g.add_edge( src, dst, name=name, mode=';', weight=1,
+                    #         sys=e1['sys'] + e2['sys'] )
 
         # find independant actions in g1
         for act in g1.es:
@@ -112,8 +123,14 @@ class SiaFold( Sia ):
             for idx in range( 0, g2.vcount() ):
                 src = self._get_vertex_id( act.source, idx )
                 dst = self._get_vertex_id( act.target, idx )
-                self.g.add_edge( src, dst, name=act['name'], mode=act['mode'],
-                        sys=act['sys'], weight=act['weight'] )
+                es.append( (src, dst) )
+                attr_name.append( act['name'] )
+                attr_mode.append( act['mode'] )
+                attr_weight.append( act['weight'] )
+                attr_sys.append( act['sys'] )
+                # self.g.add_edge( src, dst, name=act['name'], mode=act['mode'],
+                #         sys=act['sys'], weight=act['weight'] )
+        e_start = self.g.ecount()
 
         # find independant actions in g2
         for act in g2.es:
@@ -122,8 +139,19 @@ class SiaFold( Sia ):
             for idx in range( 0, g1.vcount() ):
                 src = self._get_vertex_id( idx, act.source )
                 dst = self._get_vertex_id( idx, act.target )
-                self.g.add_edge( src, dst, name=act['name'], mode=act['mode'],
-                        sys=act['sys'], weight=act['weight'] )
+                es.append( (src, dst) )
+                attr_name.append( act['name'] )
+                attr_mode.append( act['mode'] )
+                attr_weight.append( act['weight'] )
+                attr_sys.append( act['sys'] )
+                # self.g.add_edge( src, dst, name=act['name'], mode=act['mode'],
+                #         sys=act['sys'], weight=act['weight'] )
+
+        self.g.add_edges( es )
+        self.g.es[e_start:]['name'] = attr_name
+        self.g.es[e_start:]['mode'] = attr_mode
+        self.g.es[e_start:]['weight'] = attr_weight
+        self.g.es[e_start:]['sys'] = attr_sys
 
         # self.plot()
 
@@ -148,6 +176,10 @@ class SiaFold( Sia ):
         #     for v2 in g2.vs.select( end=True ):
         #         idx = self._get_vertex_id( mod, v1.index, v2.index )
         #         g.vs( idx )['end'] = True
+
+    def set_name( self, name ):
+        self.name = name
+        self.g['name'] = name
 
 
 class Pnsc( object ):
@@ -233,6 +265,7 @@ class Pnsc( object ):
 
     def _tree_distribute_info( self ):
         vs_changed = []
+        tree_ok = True
         for vt_idx, vg_idx in enumerate( self.mapping ):
             vt = self.g_tree.vs[vt_idx]
             vg = self.sia.g.vs[vg_idx]
@@ -244,7 +277,10 @@ class Pnsc( object ):
                     changed = True
                 ok &= vg['action'][sys]
             vt['ok'] = ok
+            tree_ok &= ok
             if changed: vs_changed.append( vt_idx )
+        # no need to check changed nodes once all nodes in the tree are ok
+        if tree_ok: vs_changed = []
         return vs_changed
 
     def _tree_propagate_info( self ):
@@ -279,14 +315,15 @@ class Pnsc( object ):
 
     def _tree_iterate_info( self ):
         vt_changed = self._tree_distribute_info()
+        # start with nodes higher up the tree (lower index)
+        vt_changed.sort( reverse=True )
         while len( vt_changed ) > 0:
-            for vt_idx in vt_changed:
-                vt = self.g_tree.vs[0]
-                self._tree_iterate_info_step( vt, vt['action'] )
+            while len( vt_changed ) > 0:
+                vt = self.g_tree.vs[vt_changed.pop()]
+                self._tree_iterate_info_step( vt, vt['action'], vt_changed )
             vt_changed = self._tree_distribute_info()
-            # self.plot_tree()
 
-    def _tree_iterate_info_step( self, vt, hasAction ):
+    def _tree_iterate_info_step( self, vt, hasAction, vt_changed ):
         gt = self.g_tree
         vg = self.sia.g.vs[self.mapping[vt.index]]
         ok = True
@@ -300,7 +337,11 @@ class Pnsc( object ):
             hasActionLoc = dict( hasAction )
             for sys in e['sys']:
                 hasActionLoc[sys] = True
-            self._tree_iterate_info_step( gt.vs[e.target], hasActionLoc )
+            if e.target in vt_changed:
+                # next node is a successor -> no need to check it later
+                vt_changed.remove( e.target )
+            self._tree_iterate_info_step( gt.vs[e.target], hasActionLoc,
+                    vt_changed )
 
     def _unfold( self, deep=False ):
         if deep:

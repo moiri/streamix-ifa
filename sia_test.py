@@ -51,7 +51,7 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2])
         pnsc.fold()
         self.assertTrue( pnsc.is_blocking() )
-        self.assertListEqual( ['A', 'B'], pnsc.get_blocker() )
+        self.assertSetEqual( set(['A', 'B']), set(pnsc.get_blocker()) )
 
     def test03( self ):
         """Test3 [live]"""
@@ -189,7 +189,7 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2, g3, g4])
         pnsc.fold()
         self.assertTrue( pnsc.is_blocking() )
-        self.assertListEqual( ['A', 'B'], pnsc.get_blocker() )
+        self.assertSetEqual( set( ['A', 'B'] ), set( pnsc.get_blocker() ) )
 
     def test09( self ):
         """Test9 [blocking: dl A,B]"""
@@ -211,7 +211,7 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2])
         pnsc.fold()
         self.assertTrue( pnsc.is_blocking() )
-        self.assertListEqual( ['A', 'B'], pnsc.get_blocker() )
+        self.assertSetEqual( set( ['A', 'B'] ), set( pnsc.get_blocker() ) )
 
     def test10( self ):
         """Test10 [live]"""
@@ -264,7 +264,8 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2, g3])
         pnsc.fold()
         self.assertTrue( pnsc.is_blocking() )
-        self.assertListEqual( ['A', 'B', 'C'], pnsc.get_blocker() )
+        self.assertSetEqual( set( ['A', 'B', 'C'] ),
+                set( pnsc.get_blocker() ) )
 
     def test11( self ):
         """Test11 [blocking: dl NW,NE,SE,SW]"""
@@ -296,7 +297,8 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2, g3, g4])
         pnsc.fold()
         self.assertTrue( pnsc.is_blocking() )
-        self.assertListEqual( ['NW', 'NE', 'SE', 'SW'], pnsc.get_blocker() )
+        self.assertSetEqual( set( ['NW', 'NE', 'SE', 'SW'] ),
+                set( pnsc.get_blocker() ) )
 
     def test12( self ):
         """Test12 [live]"""
@@ -329,14 +331,116 @@ class TestSia( unittest.TestCase ):
         pnsc.fold()
         self.assertFalse( pnsc.is_blocking() )
 
-    def testC( self ):
+
+    def test13_nw( self ):
+        """Crossroad Streaming Application NW [live]"""
+        print "Crossroad Streaming Application NW [live]"
+        nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(0,3),(2,5),(1,4)], True )
+        nw.es['label'] = ["w_nw", "n_nw", "e_nw", "s_nw", "no_nw", "wo_nw"]
+        nw.vs['label'] = ["cNWpNW", "cNWpNE", "cNWpSE", "cNWpSW", "bufNr", "bufWd"]
+        g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+        g1['name'] = "cNWpNW"
+        g1.es['mode'] = ["?","!","?","!"]
+        g1.es['name'] = ["wi_nw","w_nw","si_nw","s_nw"]
+        g1.es['weight'] = 1
+        g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+        g2['name'] = "cNWpNE"
+        g2.es['mode'] = ["?","!","?","!"]
+        g2.es['name'] = ["ni_nw","n_nw","w_nw","wo_nw"]
+        g2.es['weight'] = 1
+        g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+        g3['name'] = "cNWpSE"
+        g3.es['mode'] = ["?","!","?","!"]
+        g3.es['name'] = ["ei_nw","e_nw","n_nw","no_nw"]
+        g3.es['weight'] = 1
+        g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+        g4['name'] = "cNWpSW"
+        g4.es['mode'] = ["?","!","?","!"]
+        g4.es['name'] = ["s_nw","so_nw","e_nw","eo_nw"]
+        g4.es['weight'] = 1
+        g5 = sia.createBuffer( "bufWd", 1, "no_nw", "ni_sw" )
+        g6 = sia.createBuffer( "bufNr", 1, "wo_nw", "wi_ne" )
+
+        pnsc = sia.Pnsc( nw, [g1, g2, g3, g4, g5, g6])
+        pnsc.fold()
+        self.assertFalse( pnsc.is_blocking() )
+        return pnsc
+
+    def test13_ne( self ):
+        """Crossroad Streaming Application NE [live]"""
+        print "Crossroad Streaming Application NE [live]"
+        nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(0,3),(3,4),(2,5)], True )
+        nw.es['label'] = ["w_ne", "n_ne", "e_ne", "s_ne", "eo_ne", "no_ne"]
+        nw.vs['label'] = ["cNEpNW", "cNEpNE", "cNEpSE", "cNEpSW", "bufNl", "bufEd"]
+        g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+        g1['name'] = "cNEpNW"
+        g1.es['mode'] = ["?","!","?","!"]
+        g1.es['name'] = ["wi_ne","w_ne","si_ne","s_ne"]
+        g1.es['weight'] = 1
+        g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+        g2['name'] = "cNEpNE"
+        g2.es['mode'] = ["?","!","?","!"]
+        g2.es['name'] = ["ni_ne","n_ne","w_ne","wo_ne"]
+        g2.es['weight'] = 1
+        g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+        g3['name'] = "cNEpSE"
+        g3.es['mode'] = ["?","!","?","!"]
+        g3.es['name'] = ["ei_ne","e_ne","n_ne","no_ne"]
+        g3.es['weight'] = 1
+        g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+        g4['name'] = "cNEpSW"
+        g4.es['mode'] = ["?","!","?","!"]
+        g4.es['name'] = ["s_ne","so_ne","e_ne","eo_ne"]
+        g4.es['weight'] = 1
+        g5 = sia.createBuffer( "bufNl", 1, "eo_ne", "ei_nw" )
+        g6 = sia.createBuffer( "bufEd", 1, "no_ne", "ni_se" )
+
+        pnsc = sia.Pnsc( nw, [g1, g2, g3, g4, g5, g6])
+        pnsc.fold()
+        self.assertFalse( pnsc.is_blocking() )
+        return pnsc
+
+    def test13_se( self ):
+        """Crossroad Streaming Application SE [live]"""
+        print "Crossroad Streaming Application SE [live]"
+        nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(0,3),(3,4),(3,5)], True )
+        nw.es['label'] = ["w_se", "n_se", "e_se", "s_se", "so_se", "eo_se"]
+        nw.vs['label'] = ["cSEpNW", "cSEpNE", "cSEpSE", "cSEpSW", "bufEu", "bufSl"]
+        g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+        g1['name'] = "cSEpNW"
+        g1.es['mode'] = ["?","!","?","!"]
+        g1.es['name'] = ["wi_se","w_se","si_se","s_se"]
+        g1.es['weight'] = 1
+        g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+        g2['name'] = "cSEpNE"
+        g2.es['mode'] = ["?","!","?","!"]
+        g2.es['name'] = ["ni_se","n_se","w_se","wo_se"]
+        g2.es['weight'] = 1
+        g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+        g3['name'] = "cSEpSE"
+        g3.es['mode'] = ["?","!","?","!"]
+        g3.es['name'] = ["ei_se","e_se","n_se","no_se"]
+        g3.es['weight'] = 1
+        g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+        g4['name'] = "cSEpSW"
+        g4.es['mode'] = ["?","!","?","!"]
+        g4.es['name'] = ["s_se","so_se","e_se","eo_se"]
+        g4.es['weight'] = 1
+        g5 = sia.createBuffer( "bufEu", 1, "so_se", "si_ne" )
+        g6 = sia.createBuffer( "bufSl", 1, "eo_se", "ei_sw" )
+
+        pnsc = sia.Pnsc( nw, [g1, g2, g3, g4, g5, g6])
+        pnsc.fold()
+        self.assertFalse( pnsc.is_blocking() )
+
+    def test13_sw( self ):
+        """Crossroad Streaming Application SW [live]"""
+        print "Crossroad Streaming Application SW [live]"
         nw = igraph.Graph( 4, [(0,1), (1,2), (2,3), (0,3), (3,4),  (1,5)], True )
         nw.es['label'] =      ["w_sw","n_sw","e_sw","s_sw","so_sw","wo_sw"]
         nw.vs['label'] = ["cSWpNW", "cSWpNE", "cSWpSE", "cSWpSW", "bufWu", "bufSr"]
-        nw.vs['label'] = ["1", "cSWpNE", "cSWpSE", "2", "3", "bufSr"]
         g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
         g1['name'] = "cSWpNW"
-        g1['name'] = "1"
         g1.es['mode'] = ["?","!","?","!"]
         g1.es['name'] = ["wi_sw","w_sw","si_sw","s_sw"]
         g1.es['weight'] = 1
@@ -352,23 +456,90 @@ class TestSia( unittest.TestCase ):
         g3.es['weight'] = 1
         g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
         g4['name'] = "cSWpSW"
-        g4['name'] = "2"
         g4.es['mode'] = ["?","!","?","!"]
         g4.es['name'] = ["s_sw","so_sw","e_sw","eo_sw"]
         g4.es['weight'] = 1
-        g5 = igraph.Graph(1, [(0,0)], True)
-        g5['name'] = "bufWu"
-        g5['name'] = "3"
-        g5.es['mode'] = ["?"]
-        g5.es['name'] = ["so_sw"]
-        g5.es['weight'] = 1
-        # g5 = sia.createBuffer( "bufWu", 1, "so_sw", "si_nw" )
+        g5 = sia.createBuffer( "bufWu", 1, "so_sw", "si_nw" )
         g6 = sia.createBuffer( "bufSr", 1, "wo_sw", "wi_se" )
 
-        pnsc = sia.Pnsc( nw, [g1, g4, g5] )
+        pnsc = sia.Pnsc( nw, [g1, g2, g3, g4, g5, g6] )
         pnsc.fold()
-        # g_sw = siaTest( [g1, g4, g5], nw )
-        # g_sw['name'] = "cSW"
+        self.assertFalse( pnsc.is_blocking() )
+
+    @unittest.skip("maximum recursion depth exceeded")
+    def test13_nwne( self ):
+        """Crossroad Streaming Application NWNE [live]"""
+        print "Crossroad Streaming Application NWNE [live]"
+        nw = igraph.Graph( 2, [(0,1),  (1,0)], True )
+        nw.es['label'] =      ["wi_ne","ei_nw"]
+        nw.vs['label'] = ["cNW", "cNE"]
+        pnsc_nw = self.test13_nw()
+        pnsc_nw.sia.set_name( "cNW" )
+        pnsc_ne = self.test13_ne()
+        pnsc_ne.sia.set_name( "cNE" )
+        pnsc = sia.Pnsc( nw, [pnsc_nw.sia.g, pnsc_ne.sia.g] )
+        pnsc.fold()
+
+    def testCMeeting( self ):
+        """Crossroad Meeting Example [live]"""
+        print "Crossroad Meeting Example [live]"
+        nw = igraph.Graph( 3, [(0,1), (1,2)], True )
+        nw.es['label'] =      ["s_sw","so_sw"]
+        nw.vs['label'] = ["1", "2", "3"]
+        g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+        g1['name'] = "cSWpNW"
+        g1['name'] = "1"
+        g1.es['mode'] = ["?","!","?","!"]
+        g1.es['name'] = ["wi_sw","w_sw","si_sw","s_sw"]
+        g1.es['weight'] = 1
+        g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+        g2['name'] = "2"
+        g2.es['mode'] = ["?","!","?","!"]
+        g2.es['name'] = ["s_sw","so_sw","e_sw","eo_sw"]
+        g2.es['weight'] = 1
+        g3 = igraph.Graph(1, [(0,0)], True)
+        g3['name'] = "3"
+        g3.es['mode'] = ["?"]
+        g3.es['name'] = ["so_sw"]
+        g3.es['weight'] = 1
+
+        pnsc = sia.Pnsc( nw, [g1, g2, g3] )
+        pnsc.fold()
+        self.assertFalse( pnsc.is_blocking() )
+
+
+
+
+# nw = igraph.Graph( 4, [(0,1), (1,2), (2,3), (0,3), (3,4),  (1,5)], True )
+# nw.es['label'] =      ["w_sw","n_sw","e_sw","s_sw","so_sw","wo_sw"]
+# nw.vs['label'] = ["cSWpNW", "cSWpNE", "cSWpSE", "cSWpSW", "bufWu", "bufSr"]
+# g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+# g1['name'] = "cSWpNW"
+# g1.es['mode'] = ["?","!","?","!"]
+# g1.es['name'] = ["wi_sw","w_sw","si_sw","s_sw"]
+# g1.es['weight'] = 1
+# g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+# g2['name'] = "cSWpNE"
+# g2.es['mode'] = ["?","!","?","!"]
+# g2.es['name'] = ["ni_sw","n_sw","w_sw","wo_sw"]
+# g2.es['weight'] = 1
+# g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+# g3['name'] = "cSWpSE"
+# g3.es['mode'] = ["?","!","?","!"]
+# g3.es['name'] = ["ei_sw","e_sw","n_sw","no_sw"]
+# g3.es['weight'] = 1
+# g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
+# g4['name'] = "cSWpSW"
+# g4.es['mode'] = ["?","!","?","!"]
+# g4.es['name'] = ["s_sw","so_sw","e_sw","eo_sw"]
+# g4.es['weight'] = 1
+# g5 = sia.createBuffer( "bufWu", 1, "so_sw", "si_nw" )
+# g6 = sia.createBuffer( "bufSr", 1, "wo_sw", "wi_se" )
+
+# pnsc = sia.Pnsc( nw, [g1, g4, g5] )
+# pnsc.fold()
+# # g_sw = siaTest( [g1, g4, g5], nw )
+# # g_sw['name'] = "cSW"
 
 
 
@@ -630,130 +801,6 @@ class TestSia( unittest.TestCase ):
 # print
 
 
-# print "Crossroad Streaming Application [live]"
-# nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(0,3),(2,5),(1,4)], True )
-# nw.es['label'] = ["w_nw", "n_nw", "e_nw", "s_nw", "no_nw", "wo_nw"]
-# nw.vs['label'] = ["cNWpNW", "cNWpNE", "cNWpSE", "cNWpSW", "bufNr", "bufWd"]
-# g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g1['name'] = "cNWpNW"
-# g1.es['mode'] = ["?","!","?","!"]
-# g1.es['name'] = ["wi_nw","w_nw","si_nw","s_nw"]
-# g1.es['weight'] = 1
-# g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g2['name'] = "cNWpNE"
-# g2.es['mode'] = ["?","!","?","!"]
-# g2.es['name'] = ["ni_nw","n_nw","w_nw","wo_nw"]
-# g2.es['weight'] = 1
-# g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g3['name'] = "cNWpSE"
-# g3.es['mode'] = ["?","!","?","!"]
-# g3.es['name'] = ["ei_nw","e_nw","n_nw","no_nw"]
-# g3.es['weight'] = 1
-# g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g4['name'] = "cNWpSW"
-# g4.es['mode'] = ["?","!","?","!"]
-# g4.es['name'] = ["s_nw","so_nw","e_nw","eo_nw"]
-# g4.es['weight'] = 1
-# g5 = sia.createBuffer( "bufWd", 1, "no_nw", "ni_sw" )
-# g6 = sia.createBuffer( "bufNr", 1, "wo_nw", "wi_ne" )
-
-# g_nw = siaTest( [g1, g2, g3, g4, g5, g6], nw )
-# g_nw['name'] = "cNW"
-# print g_nw.summary()
-
-# nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(0,3),(3,4),(2,5)], True )
-# nw.es['label'] = ["w_ne", "n_ne", "e_ne", "s_ne", "eo_ne", "no_ne"]
-# nw.vs['label'] = ["cNEpNW", "cNEpNE", "cNEpSE", "cNEpSW", "bufNl", "bufEd"]
-# g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g1['name'] = "cNEpNW"
-# g1.es['mode'] = ["?","!","?","!"]
-# g1.es['name'] = ["wi_ne","w_ne","si_ne","s_ne"]
-# g1.es['weight'] = 1
-# g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g2['name'] = "cNEpNE"
-# g2.es['mode'] = ["?","!","?","!"]
-# g2.es['name'] = ["ni_ne","n_ne","w_ne","wo_ne"]
-# g2.es['weight'] = 1
-# g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g3['name'] = "cNEpSE"
-# g3.es['mode'] = ["?","!","?","!"]
-# g3.es['name'] = ["ei_ne","e_ne","n_ne","no_ne"]
-# g3.es['weight'] = 1
-# g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g4['name'] = "cNEpSW"
-# g4.es['mode'] = ["?","!","?","!"]
-# g4.es['name'] = ["s_ne","so_ne","e_ne","eo_ne"]
-# g4.es['weight'] = 1
-# g5 = sia.createBuffer( "bufNl", 1, "eo_ne", "ei_nw" )
-# g6 = sia.createBuffer( "bufEd", 1, "no_ne", "ni_se" )
-
-# g_ne = siaTest( [g1, g2, g3, g4, g5, g6], nw )
-# g_ne['name'] = "cNE"
-# print g_ne.summary()
-
-# nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(0,3),(3,4),(3,5)], True )
-# nw.es['label'] = ["w_se", "n_se", "e_se", "s_se", "so_se", "eo_se"]
-# nw.vs['label'] = ["cSEpNW", "cSEpNE", "cSEpSE", "cSEpSW", "bufEu", "bufSl"]
-# g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g1['name'] = "cSEpNW"
-# g1.es['mode'] = ["?","!","?","!"]
-# g1.es['name'] = ["wi_se","w_se","si_se","s_se"]
-# g1.es['weight'] = 1
-# g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g2['name'] = "cSEpNE"
-# g2.es['mode'] = ["?","!","?","!"]
-# g2.es['name'] = ["ni_se","n_se","w_se","wo_se"]
-# g2.es['weight'] = 1
-# g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g3['name'] = "cSEpSE"
-# g3.es['mode'] = ["?","!","?","!"]
-# g3.es['name'] = ["ei_se","e_se","n_se","no_se"]
-# g3.es['weight'] = 1
-# g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g4['name'] = "cSEpSW"
-# g4.es['mode'] = ["?","!","?","!"]
-# g4.es['name'] = ["s_se","so_se","e_se","eo_se"]
-# g4.es['weight'] = 1
-# g5 = sia.createBuffer( "bufEu", 1, "so_se", "si_ne" )
-# g6 = sia.createBuffer( "bufSl", 1, "eo_se", "ei_sw" )
-
-# g_se = siaTest( [g1, g2, g3, g4, g5, g6], nw )
-# g_se['name'] = "cSE"
-# print g_se.summary()
-
-
-
-
-# nw = igraph.Graph( 4, [(0,1), (1,2), (2,3), (0,3), (3,4),  (1,5)], True )
-# nw.es['label'] =      ["w_sw","n_sw","e_sw","s_sw","so_sw","wo_sw"]
-# nw.vs['label'] = ["cSWpNW", "cSWpNE", "cSWpSE", "cSWpSW", "bufWu", "bufSr"]
-# g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g1['name'] = "cSWpNW"
-# g1.es['mode'] = ["?","!","?","!"]
-# g1.es['name'] = ["wi_sw","w_sw","si_sw","s_sw"]
-# g1.es['weight'] = 1
-# g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g2['name'] = "cSWpNE"
-# g2.es['mode'] = ["?","!","?","!"]
-# g2.es['name'] = ["ni_sw","n_sw","w_sw","wo_sw"]
-# g2.es['weight'] = 1
-# g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g3['name'] = "cSWpSE"
-# g3.es['mode'] = ["?","!","?","!"]
-# g3.es['name'] = ["ei_sw","e_sw","n_sw","no_sw"]
-# g3.es['weight'] = 1
-# g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g4['name'] = "cSWpSW"
-# g4.es['mode'] = ["?","!","?","!"]
-# g4.es['name'] = ["s_sw","so_sw","e_sw","eo_sw"]
-# g4.es['weight'] = 1
-# g5 = sia.createBuffer( "bufWu", 1, "so_sw", "si_nw" )
-# g6 = sia.createBuffer( "bufSr", 1, "wo_sw", "wi_se" )
-
-# pnsc = sia.Pnsc( nw, [g1, g4, g5] )
-# pnsc.fold()
-# # g_sw = siaTest( [g1, g4, g5], nw )
-# # g_sw['name'] = "cSW"
 
 
 
