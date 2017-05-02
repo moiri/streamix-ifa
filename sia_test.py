@@ -58,6 +58,7 @@ class TestSia( unittest.TestCase ):
     def test03( self ):
         """Test3 [live]"""
         nw = igraph.Graph( 2, [], True )
+        nw.es['label'] = None
         nw.vs['label'] = ["A", "B"]
         g1 = igraph.Graph( 2, [(0,1)], True )
         g1['name'] = "A"
@@ -486,7 +487,7 @@ class TestSia( unittest.TestCase ):
         self.assertFalse( pnsc.is_blocking() )
         if self.verbose: pnsc.print_error()
 
-    @unittest.skip("maximum recursion depth exceeded")
+    # @unittest.skip("maximum recursion depth exceeded")
     def test13_nwne( self ):
         """Crossroad Streaming Application NWNE [live]"""
         nw = igraph.Graph( 2, [(0,1),  (1,0)], True )
@@ -526,5 +527,3 @@ class TestSia( unittest.TestCase ):
         pnsc.fold()
         self.assertFalse( pnsc.is_blocking() )
         if self.verbose: pnsc.print_error()
-
-

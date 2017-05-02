@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 
 import igraph, time
-from collections import deque
-ident = ""
 
 class Sia( object ):
     def __init__( self, g ):
         self.name = g["name"]
         self.g = g.copy()
         self._init_attr()
+        self.g.vs[0]['init'] = True
         self._mark_end()
         for v in self.g.vs():
             v['subsys'] = { g['name']: v.index }
@@ -20,6 +19,7 @@ class Sia( object ):
 
     def _init_attr( self ):
         self.g.vs['end'] = False
+        self.g.vs['init'] = False
         self.g.vs['blocking'] = False
         self.g.vs['ok'] = False
         self.g.vs['reach'] = False
@@ -29,8 +29,8 @@ class Sia( object ):
                 weights='weight' )
         self.g.vs( strength_eq=0 )['end'] = True
 
-    def _mark_reach( self, v=0 ):
-        (vids, starts, parents) = self.g.bfs( 0 )
+    def _mark_reach( self ):
+        (vids, starts, parents) = self.g.bfs( self.get_v_init() )
         self.g.vs[vids]['reach'] = True
 
     def delete_unreachable( self ):
@@ -45,12 +45,15 @@ class Sia( object ):
             names.append( e['name'] )
         return names
 
+    def get_v_init( self ):
+        return self.g.vs.find( init=True ).index
+
     def plot( self, layout="auto", x=1000, y=1000 ):
         """plot the graph"""
         g = self.g
         g.vs['color'] = "grey"
-        g.vs[0]['shape'] = "triangle"
-        g.vs[0]['color'] = "yellow"
+        g.vs( init=True )['shape'] = "triangle"
+        g.vs( init=True )['color'] = "yellow"
         g.vs( blocking=True )['color'] = "red"
         g.vs( end=True )['shape'] = "rectangle"
         # labels = []
@@ -79,7 +82,7 @@ class SiaFold( Sia ):
         self.mod = sia2.g.vcount()
         self.g = igraph.Graph( sia1.g.vcount()*sia2.g.vcount(), directed=True )
         self._init_attr()
-        self._init_attr_subsys( sia1.g, sia2.g )
+        self._init_attr_fold( sia1, sia2 )
         self._fold( sia1.g, sia2.g, shared )
         self.delete_unreachable()
         self._mark_end()
@@ -149,12 +152,14 @@ class SiaFold( Sia ):
         """calculate the index of the folded state"""
         return self.mod * q + r
 
-    def _init_attr_subsys( self, g1, g2 ):
+    def _init_attr_fold( self, sia1, sia2 ):
         g = self.g
-        g.vs['subsys'] = {}
+        init_id = self._get_vertex_id( sia1.get_v_init(), sia2.get_v_init() )
+        g.vs[init_id]['init'] = True
 
-        for v1 in g1.vs:
-            for v2 in g2.vs:
+        g.vs['subsys'] = {}
+        for v1 in sia1.g.vs:
+            for v2 in sia2.g.vs:
                 idx = self._get_vertex_id( v1.index, v2.index )
                 g.vs[idx]['subsys'] = dict( v1['subsys'], **v2['subsys'] )
 
@@ -178,6 +183,9 @@ class Pnsc( object ):
         self.blocker = None
         self.deadlocker = None
         self.lonelyblocker = None
+
+        self.g_cl = None
+        self.clusters = None
 
         self.g_tree = igraph.Graph( 1, directed=True )
         self.g_tree.vs['cycle'] = False
@@ -214,9 +222,89 @@ class Pnsc( object ):
             hasAction[sys.name] = False
         for v in self.sia.g.vs:
             v['action'] = dict( hasAction )
-        self._unfold()
+        self._unfold( True )
         self._set_blocking_info()
         self._separate_blocker()
+
+    def _collapse( self ):
+        hasAction = {}
+        for sys in self.systems:
+            hasAction[sys.name] = False
+        hasActions = []
+        g_tmp = self.sia.g.copy()
+        es = []
+        es_attr = []
+        for e in self.sia.g.es( weight=0 ):
+            es.append( (e.source, e.target) )
+            es_attr.append( e['sys'] )
+        g_tmp.delete_edges( es )
+        self.clusters = g_tmp.clusters()
+        for g_cl in self.clusters.subgraphs():
+            hasActionLoc = dict( hasAction )
+            for e in g_cl.es:
+                for name in e['sys']:
+                    hasActionLoc[name] = True
+                if all( [hasActionLoc[name] for name in hasActionLoc]):
+                    break
+            hasActions.append( hasActionLoc )
+
+        self.g_cl = self.clusters.cluster_graph(
+                combine_vertices={'init':'max', 'end':'max'},
+                combine_edges=False )
+        # for e in es:
+        es_add = []
+        for e in es:
+            for idx, cluster in enumerate( self.clusters ):
+                if e[0] in cluster:
+                    v_source = idx
+                    break
+            for idx, cluster in enumerate( self.clusters ):
+                if e[1] in cluster:
+                    v_target = idx
+                    break
+            es_add.append( (v_source, v_target) )
+        if len( es ) > 0:
+            e_cnt = self.g_cl.ecount()
+            self.g_cl.add_edges( es_add )
+            self.g_cl.es[e_cnt:]['sys'] = es_attr
+            self.g_cl.es[e_cnt:]['weight'] = 0
+
+        self.g_cl.simplify( loops=False,
+                combine_edges={'sys':self._combine_sys, 'weight':'max'} )
+        self.g_cl.vs['action'] = hasActions
+        # self.plot_cl()
+        # self.sia.plot()
+        # print hasActions
+
+    def plot_cl( self, layout="auto", x=1000, y=1000 ):
+        """plot the graph"""
+        g = self.g_cl
+        g.vs['color'] = "grey"
+        g.vs( init=True )['shape'] = "triangle"
+        g.vs( init=True )['color'] = "yellow"
+        g.vs( end=True )['shape'] = "rectangle"
+        g.vs['label'] = range( g.vcount() )
+        if g.ecount() > 0:
+            g.es['label'] = [ str(n) for n in g.es['sys'] ]
+            g.es( weight=0 )['color'] = "blue"
+        igraph.plot( g, layout=g.layout( layout ), bbox=( 0, 0, x, y ) )
+        del g.vs['color']
+        del g.vs['label']
+        del g.vs['shape']
+        if g.ecount() > 0:
+            del g.es['label']
+
+    def _combine_sys( self, attrs ):
+        sys = []
+        for attr in attrs:
+            for name in attr:
+                if name not in sys:
+                    sys.append( name )
+        return sys
+
+    def _expand( self ):
+        for v in self.g_cl.vs:
+            self.sia.g.vs( self.clusters[v.index] )['action'] = v['action']
 
     def _get_dependency( self, name, actions ):
         nw = self.nw
@@ -283,30 +371,12 @@ class Pnsc( object ):
                     self._update_blocker_info( v.index, sys.name, state,
                             sys.get_actions( state ) )
 
-    def _tree_propagate_info_( self ):
-        g = self.sia.g
-        g_tree = self.g_tree
-        vs = range( g_tree.vcount() )
-        vs.reverse()
-        for v in vs:
-            v_target = g.vs[self.mapping[v]]
-            for e in g_tree.es( g_tree.incident( v, mode="IN" ) ):
-                if e['weight'] == 0: continue
-                v_source = g.vs[self.mapping[e.source]]
-                g_tree.vs[e.source]['ok'] = v_source['ok']
-                g_tree.vs[e.target]['ok'] = v_target['ok']
-                if v_source['ok']: continue
-                for sys in v_target['action']:
-                    v_source['action'][sys] |= v_target['action'][sys]
-                v_source['ok'] = all( [v_source['action'][sys] for sys in v_source['action']])
-                # print "<" + str((v_source.index, v_source['action']))
-
-    def _tree_distribute_info( self ):
+    def _tree_distribute_info( self, g ):
         vs_changed = []
         tree_ok = True
         for vt_idx, vg_idx in enumerate( self.mapping ):
             vt = self.g_tree.vs[vt_idx]
-            vg = self.sia.g.vs[vg_idx]
+            vg = g.vs[vg_idx]
             ok = True
             changed = False
             for sys in vt['action']:
@@ -321,18 +391,18 @@ class Pnsc( object ):
         if tree_ok: vs_changed = []
         return vs_changed
 
-    def _tree_propagate_info( self ):
+    def _tree_propagate_info( self, g ):
         hasAction = {}
         for sys in self.systems:
             hasAction[sys.name] = False
         for v in self.g_tree.vs:
             v['action'] = dict( hasAction )
-        self._tree_propagate_info_step( self.g_tree.vs[0], hasAction )
+        self._tree_propagate_info_step( g, self.g_tree.vs[0], hasAction )
         # self.plot_tree()
 
-    def _tree_propagate_info_step( self, vt, hasAction ):
+    def _tree_propagate_info_step( self, g, vt, hasAction ):
         gt = self.g_tree
-        vg = self.sia.g.vs[self.mapping[vt.index]]
+        vg = g.vs[self.mapping[vt.index]]
         for sys in hasAction:
             vt['action'][sys] = hasAction[sys]
             vg['action'][sys] |= hasAction[sys]
@@ -341,7 +411,7 @@ class Pnsc( object ):
             hasActionLoc = dict( hasAction )
             for sys in e['sys']:
                 hasActionLoc[sys] = True
-            hasActionLoc = self._tree_propagate_info_step( gt.vs[e.target],
+            hasActionLoc = self._tree_propagate_info_step( g, gt.vs[e.target],
                     hasActionLoc )
             if e['weight'] > 0:
                 for sys in hasActionLoc:
@@ -351,19 +421,20 @@ class Pnsc( object ):
         vt['ok'] = all( [vt['action'][sys] for sys in vt['action']] )
         return vt['action']
 
-    def _tree_iterate_info( self ):
-        vt_changed = self._tree_distribute_info()
+    def _tree_iterate_info( self, g ):
+        vt_changed = self._tree_distribute_info( g )
         # start with nodes higher up the tree (lower index)
         vt_changed.sort( reverse=True )
         while len( vt_changed ) > 0:
             while len( vt_changed ) > 0:
                 vt = self.g_tree.vs[vt_changed.pop()]
-                self._tree_iterate_info_step( vt, vt['action'], vt_changed )
-            vt_changed = self._tree_distribute_info()
+                self._tree_iterate_info_step( g, vt, vt['action'], vt_changed )
+            vt_changed = self._tree_distribute_info( g )
+        # self.plot_tree()
 
-    def _tree_iterate_info_step( self, vt, hasAction, vt_changed ):
+    def _tree_iterate_info_step( self, g, vt, hasAction, vt_changed ):
         gt = self.g_tree
-        vg = self.sia.g.vs[self.mapping[vt.index]]
+        vg = g.vs[self.mapping[vt.index]]
         ok = True
         for sys in hasAction:
             vt['action'][sys] = hasAction[sys]
@@ -378,19 +449,26 @@ class Pnsc( object ):
             if e.target in vt_changed:
                 # next node is a successor -> no need to check it later
                 vt_changed.remove( e.target )
-            self._tree_iterate_info_step( gt.vs[e.target], hasActionLoc,
+            self._tree_iterate_info_step( g, gt.vs[e.target], hasActionLoc,
                     vt_changed )
 
-    def _unfold( self, deep=False ):
-        self._unfold_bfs()
-        self._tree_propagate_info()
-        self._tree_iterate_info()
+    def _unfold( self, collapse=False ):
+        g = self.sia.g
+        if collapse:
+            self._collapse()
+            g = self.g_cl
+        self._unfold_bfs( g )
+        self._tree_propagate_info( g )
+        self._tree_iterate_info( g )
+        if collapse:
+            self._expand()
 
-    def _unfold_bfs( self, vs=[0], v_start=0 ):
+    def _unfold_bfs( self, g ):
         self.g_tree = igraph.Graph( directed=True )
         self.mapping = []
         i_tree = { 'v_cnt': 1, 'es': [], 'e_attr': { 'weight': [], 'sys': [] } }
-        self._unfold_bfs_step( i_tree, vs, v_start )
+        vsg = [g.vs.find( init=True ).index]
+        self._unfold_bfs_step( g, i_tree, vsg, 0 )
         self.g_tree.add_vertices( i_tree['v_cnt'] )
         self.g_tree.add_edges( i_tree['es'] )
         self.g_tree.es['weight'] = i_tree['e_attr']['weight']
@@ -399,24 +477,23 @@ class Pnsc( object ):
         self.g_tree.vs['action'] = None
         # self.plot_tree()
 
-    def _unfold_bfs_step( self, i_tree, vs=[0], v_start=0 ):
-        g = self.sia.g
-        vs_next = []
-        for v_idx, v in enumerate( vs ):
+    def _unfold_bfs_step( self, g, i_tree, vsg, vt ):
+        vsg_next = []
+        for v_idx, v in enumerate( vsg ):
             tree_idx = len( self.mapping )
             if v in self.mapping:
                 self.mapping.append( v )
                 continue
             self.mapping.append( v )
             for e_idx, e in enumerate( g.es( g.incident( v ) ) ):
-                vs_next.append( e.target )
-                i_tree['es'].append( (v_start + v_idx, i_tree['v_cnt']) )
+                vsg_next.append( e.target )
+                i_tree['es'].append( (vt + v_idx, i_tree['v_cnt']) )
                 i_tree['e_attr']['weight'].append( e['weight'] )
                 i_tree['e_attr']['sys'].append( e['sys'] )
                 i_tree['v_cnt'] += 1
 
-        if len( vs_next ) > 0:
-            self._unfold_bfs_step( i_tree, vs_next, v_start + v_idx + 1 )
+        if len( vsg_next ) > 0:
+            self._unfold_bfs_step( g, i_tree, vsg_next, vt + v_idx + 1 )
 
     def _update_blocker_info( self, state_pnsc, name, state, actions ):
         if len( actions ) == 0: return
