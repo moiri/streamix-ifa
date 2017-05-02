@@ -12,7 +12,6 @@ class TestSia( unittest.TestCase ):
 
     def test01( self ):
         """Test1 [live]"""
-        print "Test1 [live]"
         nw = igraph.Graph( 2, [(0,1),(0,1)], True )
         nw.es['label'] = ["a", "b"]
         nw.vs['label'] = ["A", "B"]
@@ -33,7 +32,6 @@ class TestSia( unittest.TestCase ):
 
     def test02( self ):
         """Test2 [blocking: dl A,B]"""
-        print "Test2 [blocking: dl A,B]"
         nw = igraph.Graph( 2, [(0,1),(0,1)], True )
         nw.es['label'] = ["a", "b"]
         nw.vs['label'] = ["A", "B"]
@@ -52,10 +50,12 @@ class TestSia( unittest.TestCase ):
         pnsc.fold()
         self.assertTrue( pnsc.is_blocking() )
         self.assertSetEqual( set(['A', 'B']), set(pnsc.get_blocker()) )
+        dls = pnsc.get_deadlocker()
+        self.assertSetEqual( set( ['A', 'B'] ), set( dls[0] ) )
+        self.assertListEqual( [], pnsc.get_lonelyblocker() )
 
     def test03( self ):
         """Test3 [live]"""
-        print "Test3 [live]"
         nw = igraph.Graph( 2, [], True )
         nw.vs['label'] = ["A", "B"]
         g1 = igraph.Graph( 2, [(0,1)], True )
@@ -75,7 +75,6 @@ class TestSia( unittest.TestCase ):
 
     def test04( self ):
         """Test4 [blocking: lb B]"""
-        print "Test4 [blocking: lb B]"
         nw = igraph.Graph( 2, [(0,1)], True )
         nw.es['label'] = ["a"]
         nw.vs['label'] = ["A", "B"]
@@ -94,10 +93,11 @@ class TestSia( unittest.TestCase ):
         pnsc.fold()
         self.assertTrue( pnsc.is_blocking() )
         self.assertListEqual( ['B'], pnsc.get_blocker() )
+        self.assertListEqual( [], pnsc.get_deadlocker() )
+        self.assertListEqual( ['B'], pnsc.get_lonelyblocker() )
 
     def test05( self ):
         """Test5 [live]"""
-        print "Test5 [live]"
         nw = igraph.Graph( 2, [], True )
         nw.vs['label'] = ["A", "B"]
         g1 = igraph.Graph( 2, [(0,1)], True )
@@ -117,7 +117,6 @@ class TestSia( unittest.TestCase ):
 
     def test06( self ):
         """Test6 [blocking: lb A]"""
-        print "Test6 [blocking: lb A]"
         nw = igraph.Graph( 2, [(1,0)], True )
         nw.es['label'] = ["a"]
         nw.vs['label'] = ["A", "B"]
@@ -136,10 +135,11 @@ class TestSia( unittest.TestCase ):
         pnsc.fold()
         self.assertTrue( pnsc.is_blocking() )
         self.assertListEqual( ['A'], pnsc.get_blocker() )
+        self.assertListEqual( [], pnsc.get_deadlocker() )
+        self.assertListEqual( ['A'], pnsc.get_lonelyblocker() )
 
     def test07( self ):
         """Test7 [blocking: lb A]"""
-        print "Test7 [blocking: lb A]"
         nw = igraph.Graph( 2, [(1,0)], True )
         nw.es['label'] = ["a"]
         nw.vs['label'] = ["A", "B"]
@@ -158,10 +158,11 @@ class TestSia( unittest.TestCase ):
         pnsc.fold()
         self.assertTrue( pnsc.is_blocking() )
         self.assertListEqual( ['A'], pnsc.get_blocker() )
+        self.assertListEqual( [], pnsc.get_deadlocker() )
+        self.assertListEqual( ['A'], pnsc.get_lonelyblocker() )
 
     def test08( self ):
         """Test8 [blocking, dl A,B]"""
-        print "Test8 [blocking, dl A,B]"
         nw = igraph.Graph( 4, [(0,1),(1,0),(2,3),(3,2)], True )
         nw.es['label'] = ["a", "b", "c", "d"]
         nw.vs['label'] = ["A", "B", "C", "D"]
@@ -190,10 +191,12 @@ class TestSia( unittest.TestCase ):
         pnsc.fold()
         self.assertTrue( pnsc.is_blocking() )
         self.assertSetEqual( set( ['A', 'B'] ), set( pnsc.get_blocker() ) )
+        dls = pnsc.get_deadlocker()
+        self.assertSetEqual( set( ['A', 'B'] ), set( dls[0] ) )
+        self.assertListEqual( [], pnsc.get_lonelyblocker() )
 
     def test09( self ):
         """Test9 [blocking: dl A,B]"""
-        print "Test9 [blocking: dl A,B]"
         nw = igraph.Graph( 2, [(0,1),(0,1)], True )
         nw.es['label'] = ["a", "b"]
         nw.vs['label'] = ["A", "B"]
@@ -212,10 +215,12 @@ class TestSia( unittest.TestCase ):
         pnsc.fold()
         self.assertTrue( pnsc.is_blocking() )
         self.assertSetEqual( set( ['A', 'B'] ), set( pnsc.get_blocker() ) )
+        dls = pnsc.get_deadlocker()
+        self.assertSetEqual( set( ['A', 'B'] ), set( dls[0] ) )
+        self.assertListEqual( [], pnsc.get_lonelyblocker() )
 
     def test10( self ):
         """Test10 [live]"""
-        print "Test10 [live]"
         nw = igraph.Graph( 3, [(0,1),(1,2),(2,0)], True )
         nw.es['label'] = ["a", "b", "c"]
         nw.vs['label'] = ["A", "B", "C"]
@@ -241,7 +246,6 @@ class TestSia( unittest.TestCase ):
 
     def test10p( self ):
         """Test10' [blocking: dl A,B,C]"""
-        print "Test10' [blocking: dl A,B,C]"
         nw = igraph.Graph( 3, [(0,1),(1,2),(2,0)], True )
         nw.es['label'] = ["a", "b", "c"]
         nw.vs['label'] = ["A", "B", "C"]
@@ -266,10 +270,12 @@ class TestSia( unittest.TestCase ):
         self.assertTrue( pnsc.is_blocking() )
         self.assertSetEqual( set( ['A', 'B', 'C'] ),
                 set( pnsc.get_blocker() ) )
+        dls = pnsc.get_deadlocker()
+        self.assertSetEqual( set( ['A', 'B', 'C'] ), set( dls[0] ) )
+        self.assertListEqual( [], pnsc.get_lonelyblocker() )
 
     def test11( self ):
         """Test11 [blocking: dl NW,NE,SE,SW]"""
-        print "Test11 [blocking: dl NW,NE,SE,SW]"
         nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(3,0)], True )
         nw.es['label'] = ["w", "n", "e", "s"]
         nw.vs['label'] = ["NW", "NE", "SE", "SW"]
@@ -299,10 +305,12 @@ class TestSia( unittest.TestCase ):
         self.assertTrue( pnsc.is_blocking() )
         self.assertSetEqual( set( ['NW', 'NE', 'SE', 'SW'] ),
                 set( pnsc.get_blocker() ) )
+        dls = pnsc.get_deadlocker()
+        self.assertSetEqual( set( ['NW', 'NE', 'SE', 'SW'] ), set( dls[0] ) )
+        self.assertListEqual( [], pnsc.get_lonelyblocker() )
 
     def test12( self ):
         """Test12 [live]"""
-        print "Test12 [live]"
         nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(0,3)], True )
         nw.es['label'] = ["w", "n", "e", "s"]
         nw.vs['label'] = ["NW'", "NE", "SE", "SW'"]
@@ -334,7 +342,6 @@ class TestSia( unittest.TestCase ):
 
     def test13_nw( self ):
         """Crossroad Streaming Application NW [live]"""
-        print "Crossroad Streaming Application NW [live]"
         nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(0,3),(2,5),(1,4)], True )
         nw.es['label'] = ["w_nw", "n_nw", "e_nw", "s_nw", "no_nw", "wo_nw"]
         nw.vs['label'] = ["cNWpNW", "cNWpNE", "cNWpSE", "cNWpSW", "bufNr", "bufWd"]
@@ -368,7 +375,6 @@ class TestSia( unittest.TestCase ):
 
     def test13_ne( self ):
         """Crossroad Streaming Application NE [live]"""
-        print "Crossroad Streaming Application NE [live]"
         nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(0,3),(3,4),(2,5)], True )
         nw.es['label'] = ["w_ne", "n_ne", "e_ne", "s_ne", "eo_ne", "no_ne"]
         nw.vs['label'] = ["cNEpNW", "cNEpNE", "cNEpSE", "cNEpSW", "bufNl", "bufEd"]
@@ -402,7 +408,6 @@ class TestSia( unittest.TestCase ):
 
     def test13_se( self ):
         """Crossroad Streaming Application SE [live]"""
-        print "Crossroad Streaming Application SE [live]"
         nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(0,3),(3,4),(3,5)], True )
         nw.es['label'] = ["w_se", "n_se", "e_se", "s_se", "so_se", "eo_se"]
         nw.vs['label'] = ["cSEpNW", "cSEpNE", "cSEpSE", "cSEpSW", "bufEu", "bufSl"]
@@ -435,7 +440,6 @@ class TestSia( unittest.TestCase ):
 
     def test13_sw( self ):
         """Crossroad Streaming Application SW [live]"""
-        print "Crossroad Streaming Application SW [live]"
         nw = igraph.Graph( 4, [(0,1), (1,2), (2,3), (0,3), (3,4),  (1,5)], True )
         nw.es['label'] =      ["w_sw","n_sw","e_sw","s_sw","so_sw","wo_sw"]
         nw.vs['label'] = ["cSWpNW", "cSWpNE", "cSWpSE", "cSWpSW", "bufWu", "bufSr"]
@@ -469,7 +473,6 @@ class TestSia( unittest.TestCase ):
     @unittest.skip("maximum recursion depth exceeded")
     def test13_nwne( self ):
         """Crossroad Streaming Application NWNE [live]"""
-        print "Crossroad Streaming Application NWNE [live]"
         nw = igraph.Graph( 2, [(0,1),  (1,0)], True )
         nw.es['label'] =      ["wi_ne","ei_nw"]
         nw.vs['label'] = ["cNW", "cNE"]
@@ -482,7 +485,6 @@ class TestSia( unittest.TestCase ):
 
     def testCMeeting( self ):
         """Crossroad Meeting Example [live]"""
-        print "Crossroad Meeting Example [live]"
         nw = igraph.Graph( 3, [(0,1), (1,2)], True )
         nw.es['label'] =      ["s_sw","so_sw"]
         nw.vs['label'] = ["1", "2", "3"]

@@ -30,12 +30,14 @@ class Sia( object ):
         self.g.vs( strength_eq=0 )['end'] = True
 
     def _mark_reach( self, v=0 ):
-        if self.g.vs[v]['reach']:
-            return
-        self.g.vs[v]['reach'] = True
-        for e in self.g.es( self.g.incident(v) ):
-            self._mark_reach( e.target )
-        return
+        (vids, starts, parents) = self.g.bfs( 0 )
+        self.g.vs[vids]['reach'] = True
+        # if self.g.vs[v]['reach']:
+        #     return
+        # self.g.vs[v]['reach'] = True
+        # for e in self.g.es( self.g.incident(v) ):
+        #     self._mark_reach( e.target )
+        # return
 
     def delete_unreachable( self ):
         self._mark_reach()
@@ -177,10 +179,10 @@ class Pnsc( object ):
             sia = Sia( g_sia )
             self.systems.append( sia )
 
-        self.g_wait = igraph.Graph( directed=True )
-        self.g_wait_tree = igraph.Graph( directed=True )
         self.blocker_info = None
         self.blocker = None
+        self.deadlocker = None
+        self.lonelyblocker = None
 
         self.g_tree = igraph.Graph( 1, directed=True )
         self.g_tree.vs['cycle'] = False
@@ -245,13 +247,13 @@ class Pnsc( object ):
 
     def _separate_blocker( self ):
         blockers = self.get_blocker_info()
-        v_cnt = 0
+        self.deadlocker = []
+        self.lonelyblocker = []
         vs = []
         es = []
         for blocker in blockers:
             actions = []
-            if blocker not in vs:
-                vs.append( blocker )
+            vs.append( blocker )
             for state in blockers[blocker]:
                 actions += blockers[blocker][state]['actions']
             deps = self._get_dependency( blocker, actions )
@@ -260,10 +262,20 @@ class Pnsc( object ):
                     vs.append( dep )
                 es.append( (blocker, dep) )
 
-        self.g_wait = igraph.Graph( directed=True )
-        self.g_wait.add_vertices( vs )
-        self.g_wait.add_edges( es )
-        # igraph.plot( self.g_wait )
+        g_wait = igraph.Graph( directed=True )
+        g_wait.add_vertices( vs )
+        g_wait.add_edges( es )
+        g_wait.delete_vertices( g_wait.vs( _outdegree_eq=0 ) )
+        clusters = g_wait.clusters()
+        for g_cl in clusters.subgraphs():
+            if g_cl.vcount() > 1:
+                dl_elem = []
+                for v in g_cl.vs:
+                    dl_elem.append( v['name'] )
+                self.deadlocker.append( dl_elem )
+            else:
+                self.lonelyblocker.append( g_cl.vs[0]['name'] )
+        # igraph.plot( g_wait )
 
     def _set_blocking_info( self ):
         self.blocker_info = {}
@@ -441,14 +453,26 @@ class Pnsc( object ):
     def get_blocker_info( self ):
         """get a list of blocking system information"""
         if self.blocker_info == None:
-            print "ERROR: pnsc is not folded"
-            return []
+            raise AttributeError( "Pnsc.blocker_info is not set. Call Pnsc.fold() to set the attribute" )
         return self.blocker_info
+
+    def get_deadlocker( self ):
+        """get a list of lists of deadlocking system names"""
+        if self.deadlocker is not None:
+            return self.deadlocker
+        self._separate_blocker( self )
+        return self.deadlocker
+
+    def get_lonelyblocker( self ):
+        """get a list of lonely blocking system names"""
+        if self.lonelyblocker is not None:
+            return self.lonelyblocker
+        self._separate_blocker( self )
+        return self.lonelyblocker
 
     def is_blocking( self ):
         """check wheteher sia has permanent blocking state"""
-        block_cnt = len( self.sia.g.vs( blocking=True ) )
-        return ( block_cnt > 0 )
+        return ( len( self.get_blocker() ) > 0 )
 
     def fold( self ):
         sia1 = self.systems[0]
