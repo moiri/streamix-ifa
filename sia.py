@@ -32,12 +32,6 @@ class Sia( object ):
     def _mark_reach( self, v=0 ):
         (vids, starts, parents) = self.g.bfs( 0 )
         self.g.vs[vids]['reach'] = True
-        # if self.g.vs[v]['reach']:
-        #     return
-        # self.g.vs[v]['reach'] = True
-        # for e in self.g.es( self.g.incident(v) ):
-        #     self._mark_reach( e.target )
-        # return
 
     def delete_unreachable( self ):
         self._mark_reach()
@@ -170,7 +164,8 @@ class SiaFold( Sia ):
 
 
 class Pnsc( object ):
-    def __init__( self, nw, gs_sia ):
+    def __init__( self, nw, gs_sia, name="" ):
+        self.name = name
         self.nw = nw
         self.nw_abst = None
         self.sia = None
@@ -203,7 +198,7 @@ class Pnsc( object ):
             new_id = idx1
 
         cluster = igraph.VertexClustering( nw, membership )
-        g = cluster.cluster_graph( combine_vertices=concatString,
+        g = cluster.cluster_graph( combine_vertices='first',
                 combine_edges=False )
         if g.ecount() > 0:
             g.delete_edges( g.es( label_in=shared ) )
@@ -508,155 +503,30 @@ class Pnsc( object ):
         layout = g_tree.layout_reingold_tilford( root=[0] )
         igraph.plot( g_tree, layout=layout, bbox=( 0, 0, x, y ) )
 
+    def print_error( self ):
+        if self.is_blocking():
+            self.print_error_dl( self.get_deadlocker() )
+            self.print_error_lb( self.get_lonelyblocker() )
 
+    def print_error_dl( self, dls ):
+        for dl in dls:
+            print "System '" + self.name + "' has deadlocking source systems"
+            for sys in dl:
+                self.print_error_source( sys )
 
-def foldRec( sys_a, nw, prop=False ):
-    g = sys_a[0]
-    preProcess( g, prop )
-    # plot(g)
-    nw_inc = nw.copy()
-    for sys in sys_a[1:]:
-        preProcess( sys, prop )
-        shared = getShared( nw_inc, g, sys )
-        g_fold = fold( g, sys, shared, prop )
-        nw_inc = abstractGraph( nw_inc, g, sys, shared, g_fold['name'] )
-        g = g_fold
-        # plot(sys)
-        # plot(g)
-        # igraph.plot(nw_inc)
+    def print_error_lb( self, lbs ):
+        if len( lbs ) == 0: return
+        print "System '" + self.name + "' has lonely blocking source systems"
+        for lb in lbs:
+            self.print_error_source( lb )
 
-    return g
-
-def foldInc( sys_a, nw ):
-    # igraph.plot(nw)
-    g = foldRec( sys_a, nw, False )
-    # plot(g)
-
-    return g
-
-def foldFlat( sys_a, nw ):
-    # igraph.plot(nw)
-    g = foldRec( sys_a, nw, True )
-
-    # markBlockingMust( g, sys_a )
-    # markBlockingMay( g, sys_a )
-    # printErrorFlat( g, nw )
-    # for v in g.vs:
-    #     if v.index == 0:
-    #         continue
-    #     g.vs['reach'] = False
-    #     hasAction = [False] * len( sys_a )
-    #     print checkNode( 0, v.index, g, sys_a, hasAction, True )
-    plot(g)
-    unfoldGraphDeep( g, sys_a )
-
-    return g
-
-
-def concatString( attrs ):
-    name = ""
-    for attr in attrs:
-        name = attr + name
-    return name
-
-
-def printErrorInc( g, g1, g2, shared ):
-    for v in g.vs( blocking=True ):
-        block1 = False
-        block2 = False
-        printErrorFold( g['name'], v.index )
-        info = v['subsys'][g1['name']]
-        if len( info['block'] ) > 0:
-            printErrorSub( g1['name'], info['state'], info['block'] )
-            block1 = True
-        info = v['subsys'][g2['name']]
-        if len( info['block'] ) > 0:
-            printErrorSub( g2['name'], info['state'], info['block'] )
-            block2 = True
-
-        if block1 and block2:
-            printErrorDl( [g1['name'], g2['name']] )
-        elif block1:
-            printErrorLb( g1['name'] )
-        elif block2:
-            printErrorLb( g2['name'] )
-
-        reportPath( g, v )
-
-def printErrorFlat( g, nw ):
-    for v in g.vs( blocking=True ):
-        printErrorFold( g['name'], v.index )
-        lib = {}
-        for name, sys in v['subsys'].iteritems():
-            if len( sys['block'] ) > 0:
-                last_name = name
-                printErrorSub( name, sys['state'], sys['block'] )
-                lib[name] = getDependency( nw, name, sys['block'] )
-
-
-        dl = []
-        for start, deps in lib.iteritems():
-            cycle = []
-            if isDeadlock( lib, lib[start], start, cycle ):
-                if not isDuplicate( dl, cycle ):
-                    dl.append( cycle )
-                    printErrorDl( cycle )
-            else:
-                printErrorLb( start )
-        reportPath( g, v )
-
-def isDuplicate( dl, cycle ):
-    items = deque( cycle )
-    for elem in dl:
-        if len( elem ) != len( cycle ):
-            continue
-        if elem == cycle:
-            return True
-        for i in range( 1, len( elem ) ):
-            items.rotate(1)
-            if elem == list(items):
-                return True
-
-def isDeadlock( lib, deps, start, dl ):
-    for dep in deps:
-        if dep in dl:
-            return False
-        dl.append(dep)
-        if dep == start:
-            return True
-        if dep not in lib:
-            return False
-        return isDeadlock( lib, lib[dep], start, dl )
-
-def getDependency( nw, name, actions ):
-    dependency = []
-    for e in nw.es( label_in=actions ):
-        dst = nw.vs[e.target]['label']
-        src = nw.vs[e.source]['label']
-        if dst == name and src not in dependency:
-            dependency.append( src )
-        elif src == name and dst not in dependency:
-            dependency.append( dst )
-
-    return dependency
-
-def printErrorFold( name, state ):
-    print " permanent blocking of system " + name + " in state " \
-            + str( state ) + ":"
-
-def printErrorSub( name, state, actions ):
-    print "  " + name + " is blocking in state " + str( state ) \
-            + " on actions " + str( actions )
-
-def printErrorDl( name_a ):
-    str = "  => systems "
-    for name in name_a[:-1]:
-        str += name + " and "
-    str += name_a[-1] + " are deadlocking"
-    print str
-
-def printErrorLb( name ):
-    print "  => system " + name + " is lonely blocking"
+    def print_error_source( self, sys ):
+        print " - '" + sys + "' in states"
+        for state in self.blocker_info[sys]:
+            print "   - " + str( state ) + "(" \
+                    + str( self.blocker_info[sys][state]['states']) \
+                    + ") on actions " \
+                    + str( self.blocker_info[sys][state]['actions'])
 
 def createBuffer( name, cnt, a_in, a_out ):
     g = igraph.Graph(2, [(0,1),(1,0)], True)
@@ -677,4 +547,3 @@ def reportPath( g, v ):
         for e in g.es( path ):
             out += e['name'] + e['mode'] + ", "
         print " Shortest path to state " + str( v.index ) + ": " + str( out[:-2] )
-

@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 import igraph, sia, unittest
 
-debug = 0
-siaTest = sia.foldInc
-siaTest = sia.foldFlat
-
 class TestSia( unittest.TestCase ):
+    @classmethod
+    def setUpClass( cls ):
+        cls.verbose = False
 
     def assertListUnsorted( self, l1, l2 ):
         return len( l1 ) == len( l2 ) and sorted( l1 ) == sorted( l2 )
@@ -29,6 +28,7 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2])
         pnsc.fold()
         self.assertFalse( pnsc.is_blocking() )
+        if self.verbose: pnsc.print_error()
 
     def test02( self ):
         """Test2 [blocking: dl A,B]"""
@@ -53,6 +53,7 @@ class TestSia( unittest.TestCase ):
         dls = pnsc.get_deadlocker()
         self.assertSetEqual( set( ['A', 'B'] ), set( dls[0] ) )
         self.assertListEqual( [], pnsc.get_lonelyblocker() )
+        if self.verbose: pnsc.print_error()
 
     def test03( self ):
         """Test3 [live]"""
@@ -72,6 +73,7 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2])
         pnsc.fold()
         self.assertFalse( pnsc.is_blocking() )
+        if self.verbose: pnsc.print_error()
 
     def test04( self ):
         """Test4 [blocking: lb B]"""
@@ -95,6 +97,7 @@ class TestSia( unittest.TestCase ):
         self.assertListEqual( ['B'], pnsc.get_blocker() )
         self.assertListEqual( [], pnsc.get_deadlocker() )
         self.assertListEqual( ['B'], pnsc.get_lonelyblocker() )
+        if self.verbose: pnsc.print_error()
 
     def test05( self ):
         """Test5 [live]"""
@@ -114,6 +117,7 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2])
         pnsc.fold()
         self.assertFalse( pnsc.is_blocking() )
+        if self.verbose: pnsc.print_error()
 
     def test06( self ):
         """Test6 [blocking: lb A]"""
@@ -137,6 +141,7 @@ class TestSia( unittest.TestCase ):
         self.assertListEqual( ['A'], pnsc.get_blocker() )
         self.assertListEqual( [], pnsc.get_deadlocker() )
         self.assertListEqual( ['A'], pnsc.get_lonelyblocker() )
+        if self.verbose: pnsc.print_error()
 
     def test07( self ):
         """Test7 [blocking: lb A]"""
@@ -160,6 +165,7 @@ class TestSia( unittest.TestCase ):
         self.assertListEqual( ['A'], pnsc.get_blocker() )
         self.assertListEqual( [], pnsc.get_deadlocker() )
         self.assertListEqual( ['A'], pnsc.get_lonelyblocker() )
+        if self.verbose: pnsc.print_error()
 
     def test08( self ):
         """Test8 [blocking, dl A,B]"""
@@ -194,6 +200,7 @@ class TestSia( unittest.TestCase ):
         dls = pnsc.get_deadlocker()
         self.assertSetEqual( set( ['A', 'B'] ), set( dls[0] ) )
         self.assertListEqual( [], pnsc.get_lonelyblocker() )
+        if self.verbose: pnsc.print_error()
 
     def test09( self ):
         """Test9 [blocking: dl A,B]"""
@@ -218,6 +225,7 @@ class TestSia( unittest.TestCase ):
         dls = pnsc.get_deadlocker()
         self.assertSetEqual( set( ['A', 'B'] ), set( dls[0] ) )
         self.assertListEqual( [], pnsc.get_lonelyblocker() )
+        if self.verbose: pnsc.print_error()
 
     def test10( self ):
         """Test10 [live]"""
@@ -243,6 +251,7 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2, g3])
         pnsc.fold()
         self.assertFalse( pnsc.is_blocking() )
+        if self.verbose: pnsc.print_error()
 
     def test10p( self ):
         """Test10' [blocking: dl A,B,C]"""
@@ -273,6 +282,7 @@ class TestSia( unittest.TestCase ):
         dls = pnsc.get_deadlocker()
         self.assertSetEqual( set( ['A', 'B', 'C'] ), set( dls[0] ) )
         self.assertListEqual( [], pnsc.get_lonelyblocker() )
+        if self.verbose: pnsc.print_error()
 
     def test11( self ):
         """Test11 [blocking: dl NW,NE,SE,SW]"""
@@ -308,6 +318,7 @@ class TestSia( unittest.TestCase ):
         dls = pnsc.get_deadlocker()
         self.assertSetEqual( set( ['NW', 'NE', 'SE', 'SW'] ), set( dls[0] ) )
         self.assertListEqual( [], pnsc.get_lonelyblocker() )
+        if self.verbose: pnsc.print_error()
 
     def test12( self ):
         """Test12 [live]"""
@@ -338,6 +349,7 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2, g3, g4])
         pnsc.fold()
         self.assertFalse( pnsc.is_blocking() )
+        if self.verbose: pnsc.print_error()
 
 
     def test13_nw( self ):
@@ -371,6 +383,7 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2, g3, g4, g5, g6])
         pnsc.fold()
         self.assertFalse( pnsc.is_blocking() )
+        if self.verbose: pnsc.print_error()
         return pnsc
 
     def test13_ne( self ):
@@ -404,6 +417,7 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2, g3, g4, g5, g6])
         pnsc.fold()
         self.assertFalse( pnsc.is_blocking() )
+        if self.verbose: pnsc.print_error()
         return pnsc
 
     def test13_se( self ):
@@ -437,6 +451,7 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2, g3, g4, g5, g6])
         pnsc.fold()
         self.assertFalse( pnsc.is_blocking() )
+        if self.verbose: pnsc.print_error()
 
     def test13_sw( self ):
         """Crossroad Streaming Application SW [live]"""
@@ -469,6 +484,7 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2, g3, g4, g5, g6] )
         pnsc.fold()
         self.assertFalse( pnsc.is_blocking() )
+        if self.verbose: pnsc.print_error()
 
     @unittest.skip("maximum recursion depth exceeded")
     def test13_nwne( self ):
@@ -482,6 +498,7 @@ class TestSia( unittest.TestCase ):
         pnsc_ne.sia.set_name( "cNE" )
         pnsc = sia.Pnsc( nw, [pnsc_nw.sia.g, pnsc_ne.sia.g] )
         pnsc.fold()
+        if self.verbose: pnsc.print_error()
 
     def testCMeeting( self ):
         """Crossroad Meeting Example [live]"""
@@ -508,357 +525,6 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2, g3] )
         pnsc.fold()
         self.assertFalse( pnsc.is_blocking() )
+        if self.verbose: pnsc.print_error()
 
 
-
-
-# nw = igraph.Graph( 4, [(0,1), (1,2), (2,3), (0,3), (3,4),  (1,5)], True )
-# nw.es['label'] =      ["w_sw","n_sw","e_sw","s_sw","so_sw","wo_sw"]
-# nw.vs['label'] = ["cSWpNW", "cSWpNE", "cSWpSE", "cSWpSW", "bufWu", "bufSr"]
-# g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g1['name'] = "cSWpNW"
-# g1.es['mode'] = ["?","!","?","!"]
-# g1.es['name'] = ["wi_sw","w_sw","si_sw","s_sw"]
-# g1.es['weight'] = 1
-# g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g2['name'] = "cSWpNE"
-# g2.es['mode'] = ["?","!","?","!"]
-# g2.es['name'] = ["ni_sw","n_sw","w_sw","wo_sw"]
-# g2.es['weight'] = 1
-# g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g3['name'] = "cSWpSE"
-# g3.es['mode'] = ["?","!","?","!"]
-# g3.es['name'] = ["ei_sw","e_sw","n_sw","no_sw"]
-# g3.es['weight'] = 1
-# g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g4['name'] = "cSWpSW"
-# g4.es['mode'] = ["?","!","?","!"]
-# g4.es['name'] = ["s_sw","so_sw","e_sw","eo_sw"]
-# g4.es['weight'] = 1
-# g5 = sia.createBuffer( "bufWu", 1, "so_sw", "si_nw" )
-# g6 = sia.createBuffer( "bufSr", 1, "wo_sw", "wi_se" )
-
-# pnsc = sia.Pnsc( nw, [g1, g4, g5] )
-# pnsc.fold()
-# # g_sw = siaTest( [g1, g4, g5], nw )
-# # g_sw['name'] = "cSW"
-
-
-
-
-
-
-
-
-# print "Test11' [blocking: dl NW,NE,SE,SW]"
-# nw = igraph.Graph( 6, [(0,1),(1,2),(2,3),(3,0),(4,0),(4,1),(4,2),(4,3),(0,5),(1,5),(2,5),(3,5)], True )
-# nw.es['label'] =       ["w",  "n",  "e",  "s", "wi", "ni", "ei", "si", "so", "wo", "no", "eo"]
-# nw.vs['label'] = ["NW", "NE", "SE", "SW", "ENV1", "ENV2"]
-# g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g1['name'] = "NW"
-# g1.es['mode'] = ["?","!","?","!"]
-# g1.es['name'] = ["wi","w","s","so"]
-# g1.es['weight'] = 1
-# g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g2['name'] = "NE"
-# g2.es['mode'] = ["?","!","?","!"]
-# g2.es['name'] = ["ni","n","w","wo"]
-# g2.es['weight'] = 1
-# g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g3['name'] = "SE"
-# g3.es['mode'] = ["?","!","?","!"]
-# g3.es['name'] = ["ei","e","n","no"]
-# g3.es['weight'] = 1
-# g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g4['name'] = "SW"
-# g4.es['mode'] = ["?","!","?","!"]
-# g4.es['name'] = ["si","s","e","eo"]
-# g4.es['weight'] = 1
-# g5 = igraph.Graph(4, [(0,1),(1,2),(2,3),(3,0)], True)
-# g5['name'] = "ENV1"
-# g5.es['mode'] = ["!","!","!","!"]
-# g5.es['name'] = ["wi","ni","ei","si"]
-# g5.es['weight'] = 1
-# g6 = igraph.Graph(4, [(0,1),(1,2),(2,3),(3,0)], True)
-# g6['name'] = "ENV2"
-# g6.es['mode'] = ["?","?","?","?"]
-# g6.es['name'] = ["wo","no","eo","so"]
-# g6.es['weight'] = 1
-
-# g = siaTest( [g1, g2, g3, g4, g5, g6], nw )
-# print
-
-
-# print "Test11'' [blocking: dl NW,NE,SE,SW]"
-# nw = igraph.Graph( 6, [(0,1),(1,2),(2,3),(3,0),(4,0),(4,1),(4,2),(4,3)], True )
-# nw.es['label'] =       ["w",  "n",  "e",  "s", "wi", "ni", "ei", "si"]
-# nw.vs['label'] = ["NW", "NE", "SE", "SW", "ENV1"]
-# g1 = igraph.Graph(2, [(0,1),(1,0),(0,0)], True)
-# g1['name'] = "NW"
-# g1.es['mode'] = ["?","!","?"]
-# g1.es['name'] = ["wi","w","s"]
-# g1.es['weight'] = 1
-# g2 = igraph.Graph(2, [(0,1),(1,0),(0,0)], True)
-# g2['name'] = "NE"
-# g2.es['mode'] = ["?","!","?"]
-# g2.es['name'] = ["ni","n","w"]
-# g2.es['weight'] = 1
-# g3 = igraph.Graph(2, [(0,1),(1,0),(0,0)], True)
-# g3['name'] = "SE"
-# g3.es['mode'] = ["?","!","?"]
-# g3.es['name'] = ["ei","e","n"]
-# g3.es['weight'] = 1
-# g4 = igraph.Graph(2, [(0,1),(1,0),(0,0)], True)
-# g4['name'] = "SW"
-# g4.es['mode'] = ["?","!","?"]
-# g4.es['name'] = ["si","s","e"]
-# g4.es['weight'] = 1
-# g5 = igraph.Graph(4, [(0,1),(1,2),(2,3),(3,0)], True)
-# g5['name'] = "ENV1"
-# g5.es['mode'] = ["!","!","!","!"]
-# g5.es['name'] = ["wi","ni","ei","si"]
-# g5.es['weight'] = 1
-
-# g = siaTest( [g1, g2, g3, g4, g5], nw )
-# print
-
-
-# print "Test11''' [live]"
-# nw = igraph.Graph( 5, [(0,1),(1,2),(2,3),(3,0),(4,0),(4,1),(4,2),(4,3),(0,4),(1,4),(2,4),(3,4)], True )
-# nw.es['label'] =       ["w",  "n",  "e",  "s", "wi", "ni", "ei", "si", "so", "wo", "no", "eo"]
-# nw.vs['label'] = ["NW", "NE", "SE", "SW", "ENV"]
-# g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g1['name'] = "NW"
-# g1.es['mode'] = ["?","!","?","!"]
-# g1.es['name'] = ["wi","w","s","so"]
-# g1.es['weight'] = 1
-# g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g2['name'] = "NE"
-# g2.es['mode'] = ["?","!","?","!"]
-# g2.es['name'] = ["ni","n","w","wo"]
-# g2.es['weight'] = 1
-# g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g3['name'] = "SE"
-# g3.es['mode'] = ["?","!","?","!"]
-# g3.es['name'] = ["ei","e","n","no"]
-# g3.es['weight'] = 1
-# g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g4['name'] = "SW"
-# g4.es['mode'] = ["?","!","?","!"]
-# g4.es['name'] = ["si","s","e","eo"]
-# g4.es['weight'] = 1
-# g5 = igraph.Graph(8, [(0,1),(1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(7,0)], True)
-# g5['name'] = "ENV"
-# # g5.es['mode'] = ["!", "?", "!", "?", "!", "?", "!", "?"]
-# g5.es['mode'] = ["!", "!", "!", "!", "?", "?", "?", "?"]
-# # g5.es['name'] = ["wi","wo","ni","no","ei","eo","si","so"]
-# g5.es['name'] = ["wi","ni","ei","si","wo","no","eo","so"]
-# g5.es['weight'] = 1
-
-# g = siaTest( [g1, g2, g3, g4, g5], nw )
-# print
-
-
-
-
-# print "Test12' [live]"
-# nw = igraph.Graph( 6, [(0,1),(1,2),(2,3),(0,3),(4,0),(4,1),(4,2),(4,0)], True )
-# nw.es['label'] =       ["w",  "n",  "e",  "s", "wi", "ni", "ei", "si"]
-# nw.vs['label'] = ["NW'", "NE", "SE", "SW'", "ENV1"]
-# g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g1['name'] = "NW'"
-# g1.es['mode'] = ["?","!","?","!"]
-# g1.es['name'] = ["wi","w","si","s"]
-# g1.es['weight'] = 1
-# g2 = igraph.Graph(2, [(0,1),(1,0),(0,0)], True)
-# g2['name'] = "NE"
-# g2.es['mode'] = ["?","!","?"]
-# g2.es['name'] = ["ni","n","w"]
-# g2.es['weight'] = 1
-# g3 = igraph.Graph(2, [(0,1),(1,0),(0,0)], True)
-# g3['name'] = "SE"
-# g3.es['mode'] = ["?","!","?"]
-# g3.es['name'] = ["ei","e","n"]
-# g3.es['weight'] = 1
-# g4 = igraph.Graph(1, [(0,0),(0,0)], True)
-# g4['name'] = "SW'"
-# g4.es['mode'] = ["?","?"]
-# g4.es['name'] = ["s","e"]
-# g4.es['weight'] = 1
-# g5 = igraph.Graph(4, [(0,1),(1,2),(2,3),(3,0)], True)
-# g5['name'] = "ENV1"
-# g5.es['mode'] = ["!","!","!","!"]
-# g5.es['name'] = ["wi","ni","ei","si"]
-# g5.es['weight'] = 1
-
-# g = siaTest( [g1, g2, g3, g4, g5], nw )
-# print
-
-
-# print "Test12'' [live]"
-# nw = igraph.Graph( 6, [(0,1),(1,2),(2,3),(0,3),(4,0),(4,1),(4,2),(4,0)], True )
-# nw.es['label'] =       ["w",  "n",  "e",  "s", "wi", "ni", "ei", "si"]
-# nw.vs['label'] = ["NW'", "NE", "SE", "SW'", "ENV1"]
-# g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g1['name'] = "NW'"
-# g1.es['mode'] = ["?","!","?","!"]
-# g1.es['name'] = ["wi","w","si","s"]
-# g1.es['weight'] = 1
-# g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g2['name'] = "NE"
-# g2.es['mode'] = ["?","!","?","!"]
-# g2.es['name'] = ["ni","n","w","wo"]
-# g2.es['weight'] = 1
-# g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g3['name'] = "SE"
-# g3.es['mode'] = ["?","!","?","!"]
-# g3.es['name'] = ["ei","e","n","no"]
-# g3.es['weight'] = 1
-# g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g4['name'] = "SW'"
-# g4.es['mode'] = ["?","!","?","!"]
-# g4.es['name'] = ["s","so","e","eo"]
-# g4.es['weight'] = 1
-# g5 = igraph.Graph(4, [(0,1),(1,2),(2,3),(3,0)], True)
-# g5['name'] = "ENV1"
-# g5.es['mode'] = ["!","!","!","!"]
-# g5.es['name'] = ["wi","ni","ei","si"]
-# g5.es['weight'] = 1
-
-# g = siaTest( [g1, g2, g3, g4, g5], nw )
-# print
-
-
-# print "Test12''' [live]"
-# nw = igraph.Graph( 6, [(0,1),(1,2),(2,3),(0,3),(4,0),(4,1),(4,2),(4,0),(1,5),(2,5),(3,5),(3,5)], True )
-# nw.es['label'] =       ["w",  "n",  "e",  "s", "wi", "ni", "ei", "si", "wo", "no", "eo", "so"]
-# nw.vs['label'] = ["NW'", "NE", "SE", "SW'", "ENV1", "ENV2"]
-# g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g1['name'] = "NW'"
-# g1.es['mode'] = ["?","!","?","!"]
-# g1.es['name'] = ["wi","w","si","s"]
-# g1.es['weight'] = 1
-# g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g2['name'] = "NE"
-# g2.es['mode'] = ["?","!","?","!"]
-# g2.es['name'] = ["ni","n","w","wo"]
-# g2.es['weight'] = 1
-# g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g3['name'] = "SE"
-# g3.es['mode'] = ["?","!","?","!"]
-# g3.es['name'] = ["ei","e","n","no"]
-# g3.es['weight'] = 1
-# g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g4['name'] = "SW'"
-# g4.es['mode'] = ["?","!","?","!"]
-# g4.es['name'] = ["s","so","e","eo"]
-# g4.es['weight'] = 1
-# g5 = igraph.Graph(4, [(0,1),(1,2),(2,3),(3,0)], True)
-# g5['name'] = "ENV1"
-# g5.es['mode'] = ["!","!","!","!"]
-# g5.es['name'] = ["si","wi","ei","ni"]
-# g5.es['weight'] = 1
-# g6 = igraph.Graph(4, [(0,1),(1,2),(2,3),(3,0)], True)
-# g6['name'] = "ENV2"
-# g6.es['mode'] = ["?","?","?","?"]
-# g6.es['name'] = ["wo","no","eo","so"]
-# g6.es['weight'] = 1
-
-# g = siaTest( [g1, g2, g3, g4, g5, g6], nw )
-# print
-
-# print "Test12'''' [live]"
-# nw = igraph.Graph( 6, [(0,1),(1,2),(2,3),(0,3),(4,0),(4,1),(4,2),(4,0),(1,4),(2,4),(3,4),(3,4)], True )
-# nw.es['label'] =       ["w",  "n",  "e",  "s", "wi", "ni", "ei", "si", "wo", "no", "eo", "so"]
-# nw.vs['label'] = ["NW'", "NE", "SE", "SW'", "ENV"]
-# g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g1['name'] = "NW'"
-# g1.es['mode'] = ["?","!","?","!"]
-# g1.es['name'] = ["wi","w","si","s"]
-# g1.es['weight'] = 1
-# g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g2['name'] = "NE"
-# g2.es['mode'] = ["?","!","?","!"]
-# g2.es['name'] = ["ni","n","w","wo"]
-# g2.es['weight'] = 1
-# g3 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g3['name'] = "SE"
-# g3.es['mode'] = ["?","!","?","!"]
-# g3.es['name'] = ["ei","e","n","no"]
-# g3.es['weight'] = 1
-# g4 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-# g4['name'] = "SW'"
-# g4.es['mode'] = ["?","!","?","!"]
-# g4.es['name'] = ["s","so","e","eo"]
-# g4.es['weight'] = 1
-# g5 = igraph.Graph(8, [(0,1),(1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(7,0)], True)
-# g5['name'] = "ENV"
-# g5.es['mode'] = ["!", "?", "!", "?", "!", "?", "!", "?"]
-# # g5.es['mode'] = ["!", "!", "!", "!", "?", "?", "?", "?"]
-# g5.es['name'] = ["wi","wo","ni","no","ei","eo","si","so"]
-# # g5.es['name'] = ["wi","ni","ei","si","wo","no","eo","so"]
-# g5.es['weight'] = 1
-
-# g = siaTest( [g1, g2, g3, g4, g5], nw )
-# print
-
-
-
-
-
-
-
-# nw = igraph.Graph( 12, [
-#     (0,1),(1,3),(3,2),(2,0),
-#     (3,5),(5,6),(6,4),(4,3),
-#     (6,8),(8,9),(9,7),(7,6),
-#     (9,10),(10,0),(0,11),(11,9)
-#     ], True )
-# nw.es['label'] = [
-#         "wo_nw", "wi_ne", "eo_ne", "ei_nw",
-#         "no_ne", "ni_se", "so_se", "si_ne",
-#         "eo_se", "ei_sw", "wo_sw", "wi_se",
-#         "so_sw", "si_nw", "no_nw", "ni_sw"]
-# nw.vs['label'] = ["cNW", "bufNr", "bufNl", "cNE", "bufEu", "bufEd", "cSE", "bufSr", "bufSl", "cSW", "bufWu", "bufWd"]
-# # igraph.plot(nw)
-# g1 = igraph.Graph(2, [(0,1),(1,0)], True)
-# g1['name'] = "bufWu"
-# g1.es['mode'] = ["?","!"]
-# g1.es['name'] = ["so_sw","si_nw"]
-# g1.es['weight'] = 1
-# g2 = igraph.Graph(2, [(0,1),(1,0)], True)
-# g2['name'] = "bufWd"
-# g2.es['mode'] = ["?","!"]
-# g2.es['name'] = ["no_nw","ni_sw"]
-# g2.es['weight'] = 1
-# g3 = igraph.Graph(2, [(0,1),(1,0)], True)
-# g3['name'] = "bufNr"
-# g3.es['mode'] = ["?","!"]
-# g3.es['name'] = ["wo_nw","wi_ne"]
-# g3.es['weight'] = 1
-# g4 = igraph.Graph(2, [(0,1),(1,0)], True)
-# g4['name'] = "bufNl"
-# g4.es['mode'] = ["?","!"]
-# g4.es['name'] = ["eo_ne","ei_nw"]
-# g4.es['weight'] = 1
-# g5 = igraph.Graph(2, [(0,1),(1,0)], True)
-# g5['name'] = "bufEu"
-# g5.es['mode'] = ["?","!"]
-# g5.es['name'] = ["so_se","si_ne"]
-# g5.es['weight'] = 1
-# g6 = igraph.Graph(2, [(0,1),(1,0)], True)
-# g6['name'] = "bufEd"
-# g6.es['mode'] = ["?","!"]
-# g6.es['name'] = ["no_ne","ni_se"]
-# g6.es['weight'] = 1
-# g7 = igraph.Graph(2, [(0,1),(1,0)], True)
-# g7['name'] = "bufSr"
-# g7.es['mode'] = ["?","!"]
-# g7.es['name'] = ["wo_sw","wi_se"]
-# g7.es['weight'] = 1
-# g8 = igraph.Graph(2, [(0,1),(1,0)], True)
-# g8['name'] = "bufSl"
-# g8.es['mode'] = ["?","!"]
-# g8.es['name'] = ["eo_se","ei_sw"]
-# g8.es['weight'] = 1
-# g = siaTest( [g1, g2, g3, g4, g5, g6, g7, g8, g_nw, g_ne, g_se, g_sw], nw )
