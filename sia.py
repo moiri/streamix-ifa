@@ -76,6 +76,15 @@ class Sia( object ):
         if g.ecount() > 0:
             del g.es['label']
 
+    def print_stats( self ):
+        g = self.g
+        print "# of states: " + str( g.vcount() )
+        print "# of actions: " + str( g.ecount() )
+        print "  - input actions: " + str( len( g.es( mode="?" ) ) )
+        print "  - output actions: " + str( len( g.es( mode="!" ) ) )
+        print "  - internal actions: " + str( len( g.es( mode=";" ) ) )
+        print "    - internal may actions: " + str( len( g.es( weight=0 ) ) )
+
 
 class SiaFold( Sia ):
     def __init__( self, sia1, sia2, shared ):
@@ -87,6 +96,7 @@ class SiaFold( Sia ):
         self.delete_unreachable()
         self._mark_end()
         self.set_name( sia1.name + sia2.name )
+        # print self.print_stats()
 
     def _fold( self, g1, g2, shared ):
         """fold two graphs together"""
@@ -389,37 +399,8 @@ class Pnsc( object ):
             if changed: vs_changed.append( vt_idx )
         # no need to check changed nodes once all nodes in the tree are ok
         if tree_ok: vs_changed = []
-        return vs_changed
-
-    def _tree_propagate_info( self, g ):
-        hasAction = {}
-        for sys in self.systems:
-            hasAction[sys.name] = False
-        for v in self.g_tree.vs:
-            v['action'] = dict( hasAction )
-        self._tree_propagate_info_step( g, self.g_tree.vs[0], hasAction )
         # self.plot_tree()
-
-    def _tree_propagate_info_step( self, g, vt, hasAction ):
-        gt = self.g_tree
-        vg = g.vs[self.mapping[vt.index]]
-        for sys in hasAction:
-            vt['action'][sys] = hasAction[sys]
-            vg['action'][sys] |= hasAction[sys]
-
-        for e in gt.es( gt.incident( vt.index ) ):
-            hasActionLoc = dict( hasAction )
-            for sys in e['sys']:
-                hasActionLoc[sys] = True
-            hasActionLoc = self._tree_propagate_info_step( g, gt.vs[e.target],
-                    hasActionLoc )
-            if e['weight'] > 0:
-                for sys in hasActionLoc:
-                    vt['action'][sys] |= hasActionLoc[sys]
-                    vg['action'][sys] |= hasActionLoc[sys]
-
-        vt['ok'] = all( [vt['action'][sys] for sys in vt['action']] )
-        return vt['action']
+        return vs_changed
 
     def _tree_iterate_info( self, g ):
         vt_changed = self._tree_distribute_info( g )
@@ -451,6 +432,36 @@ class Pnsc( object ):
                 vt_changed.remove( e.target )
             self._tree_iterate_info_step( g, gt.vs[e.target], hasActionLoc,
                     vt_changed )
+
+    def _tree_propagate_info( self, g ):
+        hasAction = {}
+        for sys in self.systems:
+            hasAction[sys.name] = False
+        for v in self.g_tree.vs:
+            v['action'] = dict( hasAction )
+        self._tree_propagate_info_step( g, self.g_tree.vs[0], hasAction )
+        # self.plot_tree()
+
+    def _tree_propagate_info_step( self, g, vt, hasAction ):
+        gt = self.g_tree
+        vg = g.vs[self.mapping[vt.index]]
+        for sys in hasAction:
+            vt['action'][sys] = hasAction[sys]
+            vg['action'][sys] |= hasAction[sys]
+
+        for e in gt.es( gt.incident( vt.index ) ):
+            hasActionLoc = dict( hasAction )
+            for sys in e['sys']:
+                hasActionLoc[sys] = True
+            hasActionLoc = self._tree_propagate_info_step( g, gt.vs[e.target],
+                    hasActionLoc )
+            if e['weight'] > 0:
+                for sys in hasActionLoc:
+                    vt['action'][sys] |= hasActionLoc[sys]
+                    vg['action'][sys] |= hasActionLoc[sys]
+
+        vt['ok'] = all( [vt['action'][sys] for sys in vt['action']] )
+        return vt['action']
 
     def _unfold( self, collapse=False ):
         g = self.sia.g
@@ -560,7 +571,8 @@ class Pnsc( object ):
         self.sia = sia
         self._analyse_blocking()
         # self.sia.plot()
-        # self.plot_tree(x=2000,y=1000)
+        # self.plot_cl()
+        # self.plot_tree()
 
         return sia
 
