@@ -4,7 +4,7 @@ import igraph, sia, unittest
 class TestSia( unittest.TestCase ):
     @classmethod
     def setUpClass( cls ):
-        cls.verbose = False
+        cls.verbose = True
 
     def assertListUnsorted( self, l1, l2 ):
         return len( l1 ) == len( l2 ) and sorted( l1 ) == sorted( l2 )
@@ -319,7 +319,9 @@ class TestSia( unittest.TestCase ):
         dls = pnsc.get_deadlocker()
         self.assertSetEqual( set( ['NW', 'NE', 'SE', 'SW'] ), set( dls[0] ) )
         self.assertListEqual( [], pnsc.get_lonelyblocker() )
-        if self.verbose: pnsc.print_error()
+        if self.verbose:
+            pnsc.print_error()
+            pnsc.sia.print_stats()
 
     def test12( self ):
         """DL-free Crossroad [live]"""
@@ -350,7 +352,9 @@ class TestSia( unittest.TestCase ):
         pnsc = sia.Pnsc( nw, [g1, g2, g3, g4])
         pnsc.fold()
         self.assertFalse( pnsc.is_blocking() )
-        if self.verbose: pnsc.print_error()
+        if self.verbose:
+            pnsc.print_error()
+            pnsc.sia.print_stats()
 
     def test13_nw( self ):
         """Crossroad Streaming Application NW [live]"""

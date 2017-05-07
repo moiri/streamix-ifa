@@ -227,82 +227,40 @@ class Pnsc( object ):
         if self.sia == None:
             print "ERROR: no abstarcted SIA defined"
             return
-        hasAction = {}
-        for sys in self.systems:
-            hasAction[sys.name] = False
-        for v in self.sia.g.vs:
-            v['action'] = dict( hasAction )
         self._unfold( True )
         self._set_blocking_info()
         self._separate_blocker()
 
     def _collapse( self ):
-        hasAction = {}
-        for sys in self.systems:
-            hasAction[sys.name] = False
-        hasActions = []
         g_tmp = self.sia.g.copy()
         es = []
         es_attr = []
+        # remove and save internal may transitions
         for e in self.sia.g.es( weight=0 ):
             es.append( (e.source, e.target) )
             es_attr.append( e['sys'] )
         g_tmp.delete_edges( es )
-        self.clusters = g_tmp.clusters()
-        for g_cl in self.clusters.subgraphs():
-            hasActionLoc = dict( hasAction )
-            for e in g_cl.es:
-                for name in e['sys']:
-                    hasActionLoc[name] = True
-                if all( [hasActionLoc[name] for name in hasActionLoc]):
-                    break
-            hasActions.append( hasActionLoc )
 
+        # create clustering
+        self.clusters = g_tmp.clusters()
+
+        # re-add internal may transition
+        e_start = self.clusters.graph.ecount()
+        self.clusters.graph.add_edges( es )
+        self.clusters.graph.es[e_start:]['sys'] = es_attr
+        self.clusters.graph.es[e_start:]['weight'] = 0
+
+        # create graph from clustering
         self.g_cl = self.clusters.cluster_graph(
                 combine_vertices={'init':'max', 'end':'max'},
                 combine_edges=False )
-        # for e in es:
-        es_add = []
-        for e in es:
-            for idx, cluster in enumerate( self.clusters ):
-                if e[0] in cluster:
-                    v_source = idx
-                    break
-            for idx, cluster in enumerate( self.clusters ):
-                if e[1] in cluster:
-                    v_target = idx
-                    break
-            es_add.append( (v_source, v_target) )
-        if len( es ) > 0:
-            e_cnt = self.g_cl.ecount()
-            self.g_cl.add_edges( es_add )
-            self.g_cl.es[e_cnt:]['sys'] = es_attr
-            self.g_cl.es[e_cnt:]['weight'] = 0
 
+        # combine edges and merge their attributes (but do not remove loops, as
+        # the cluster_graph method would)
         self.g_cl.simplify( loops=False,
                 combine_edges={'sys':self._combine_sys, 'weight':'max'} )
-        self.g_cl.vs['action'] = hasActions
         # self.plot_cl()
         # self.sia.plot()
-        # print hasActions
-
-    def plot_cl( self, layout="auto", x=1000, y=1000 ):
-        """plot the graph"""
-        g = self.g_cl
-        g.vs['color'] = "grey"
-        g.vs( init=True )['shape'] = "triangle"
-        g.vs( init=True )['color'] = "yellow"
-        g.vs( end=True )['shape'] = "rectangle"
-        g.vs['label'] = range( g.vcount() )
-        if g.ecount() > 0:
-            g.es['label'] = [ str(n) for n in g.es['sys'] ]
-            g.es( weight=0 )['color'] = "blue"
-        igraph.plot( g, layout=g.layout( layout ), bbox=( 0, 0, x, y ) )
-        del g.vs['color']
-        del g.vs['label']
-        del g.vs['shape']
-        if g.ecount() > 0:
-            del g.es['label']
 
     def _combine_sys( self, attrs ):
         sys = []
@@ -433,35 +391,24 @@ class Pnsc( object ):
             self._tree_iterate_info_step( g, gt.vs[e.target], hasActionLoc,
                     vt_changed )
 
-    def _tree_propagate_info( self, g ):
-        hasAction = {}
-        for sys in self.systems:
-            hasAction[sys.name] = False
-        for v in self.g_tree.vs:
-            v['action'] = dict( hasAction )
-        self._tree_propagate_info_step( g, self.g_tree.vs[0], hasAction )
-        # self.plot_tree()
-
-    def _tree_propagate_info_step( self, g, vt, hasAction ):
+    def _tree_propagate_info( self, g, vt_src ):
         gt = self.g_tree
-        vg = g.vs[self.mapping[vt.index]]
-        for sys in hasAction:
-            vt['action'][sys] = hasAction[sys]
-            vg['action'][sys] |= hasAction[sys]
+        vg_src = g.vs[self.mapping[vt_src.index]]
 
-        for e in gt.es( gt.incident( vt.index ) ):
-            hasActionLoc = dict( hasAction )
+        for e in gt.es( gt.incident( vt_src.index ) ):
+            vt_dst = gt.vs[e.target]
+            vg_dst = g.vs[self.mapping[vt_dst.index]]
             for sys in e['sys']:
-                hasActionLoc[sys] = True
-            hasActionLoc = self._tree_propagate_info_step( g, gt.vs[e.target],
-                    hasActionLoc )
+                vt_dst['action'][sys] = True
+                vg_dst['action'][sys] = True
+            hasAction = self._tree_propagate_info( g, vt_dst )
             if e['weight'] > 0:
-                for sys in hasActionLoc:
-                    vt['action'][sys] |= hasActionLoc[sys]
-                    vg['action'][sys] |= hasActionLoc[sys]
+                for sys in hasAction:
+                    vt_src['action'][sys] |= hasAction[sys]
+                    vg_src['action'][sys] |= hasAction[sys]
 
-        vt['ok'] = all( [vt['action'][sys] for sys in vt['action']] )
-        return vt['action']
+        vt_src['ok'] = all( [vt_src['action'][sys] for sys in vt_src['action']] )
+        return vt_src['action']
 
     def _unfold( self, collapse=False ):
         g = self.sia.g
@@ -469,7 +416,7 @@ class Pnsc( object ):
             self._collapse()
             g = self.g_cl
         self._unfold_bfs( g )
-        self._tree_propagate_info( g )
+        self._tree_propagate_info( g, self.g_tree.vs[0] )
         self._tree_iterate_info( g )
         if collapse:
             self._expand()
@@ -477,6 +424,11 @@ class Pnsc( object ):
     def _unfold_bfs( self, g ):
         self.g_tree = igraph.Graph( directed=True )
         self.mapping = []
+        hasAction = {}
+        for sys in self.systems:
+            hasAction[sys.name] = False
+        for v in g.vs:
+            v['action'] = dict( hasAction )
         i_tree = { 'v_cnt': 1, 'es': [], 'e_attr': { 'weight': [], 'sys': [] } }
         vsg = [g.vs.find( init=True ).index]
         self._unfold_bfs_step( g, i_tree, vsg, 0 )
@@ -485,7 +437,8 @@ class Pnsc( object ):
         self.g_tree.es['weight'] = i_tree['e_attr']['weight']
         self.g_tree.es['sys'] = i_tree['e_attr']['sys']
         self.g_tree.vs['ok'] = False
-        self.g_tree.vs['action'] = None
+        for v in self.g_tree.vs:
+            v['action'] = dict( hasAction )
         # self.plot_tree()
 
     def _unfold_bfs_step( self, g, i_tree, vsg, vt ):
@@ -575,6 +528,24 @@ class Pnsc( object ):
         # self.plot_tree()
 
         return sia
+
+    def plot_cl( self, layout="auto", x=1000, y=1000 ):
+        """plot the graph"""
+        g = self.g_cl
+        g.vs['color'] = "grey"
+        g.vs( init=True )['shape'] = "triangle"
+        g.vs( init=True )['color'] = "yellow"
+        g.vs( end=True )['shape'] = "rectangle"
+        g.vs['label'] = range( g.vcount() )
+        if g.ecount() > 0:
+            g.es['label'] = [ str(n) for n in g.es['sys'] ]
+            g.es( weight=0 )['color'] = "blue"
+        igraph.plot( g, layout=g.layout( layout ), bbox=( 0, 0, x, y ) )
+        del g.vs['color']
+        del g.vs['label']
+        del g.vs['shape']
+        if g.ecount() > 0:
+            del g.es['label']
 
     def plot_tree( self, layout="auto", x=1000, y=1000 ):
         g_tree = self.g_tree
