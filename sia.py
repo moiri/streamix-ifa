@@ -184,10 +184,8 @@ class Pnsc( object ):
         self.nw = nw
         self.nw_abst = None
         self.sia = None
-        self.systems = []
-        for g_sia in gs_sia:
-            sia = Sia( g_sia )
-            self.systems.append( sia )
+
+        self._init_systems( gs_sia )
 
         self.blocker_info = None
         self.blocker = None
@@ -292,6 +290,12 @@ class Pnsc( object ):
         for e in g_sub.es:
             shared.append( e['label'] )
         return shared
+
+    def _init_systems( self, gs_sia):
+        self.systems = []
+        for g_sia in gs_sia:
+            sia = Sia( g_sia )
+            self.systems.append( sia )
 
     def _select_undecided( self, v ):
         return v['end'] or not v['ok']
@@ -587,6 +591,59 @@ class Pnsc( object ):
                     + str( self.blocker_info[sys][state]['states']) \
                     + ") on actions " \
                     + str( self.blocker_info[sys][state]['actions'])
+
+
+class PnscBuffer( Pnsc ):
+    def __init__( self, nw, gs_sia, name="", buf_len=1 ):
+        self.buf_len = buf_len
+        super( PnscBuffer, self ).__init__( nw, gs_sia, name )
+
+    def _add_buffer( self, g_sia, buf_len ):
+        """fold each output with a automaton modeling a buffer"""
+        e_buf = []
+        shared = []
+        q_prefix = "_queue_"
+        for e in g_sia.es( mode='!' ):
+            if e["name"] not in e_buf:
+                e_buf.append( e["name"] )
+                shared.append( q_prefix + e["name"] )
+
+        v_cnt = -1
+        es = []
+        es_name = []
+        es_mode = []
+        for name in e_buf:
+            # rename original port
+            q_name = q_prefix + name
+            for e in g_sia.es( name=name ):
+                e["name"] = q_name
+            v_cnt += 1
+            for b_cnt in range( buf_len ):
+                es.append( (v_cnt + b_cnt, v_cnt + b_cnt + 1) )
+                es.append( (v_cnt + b_cnt + 1, v_cnt + b_cnt) )
+                es_name.append( q_name )
+                es_mode.append( '?' )
+                es_name.append( name )
+                es_mode.append( '!' )
+                v_cnt += 1
+
+        g_buf = igraph.Graph( v_cnt, es, directed=True )
+        g_buf['name'] = g_sia['name']
+        g_buf.es['name'] = es_name
+        g_buf.es['mode'] = es_mode
+        g_buf.es['weight'] = 1
+
+        sia = SiaFold( Sia( g_sia ), Sia( g_buf ), shared )
+        sia.set_name( g_sia['name'] )
+        return sia
+
+
+    def _init_systems( self, gs_sia):
+        self.systems = []
+        for g_sia in gs_sia:
+            sia = self._add_buffer( g_sia, self.buf_len )
+            self.systems.append( sia )
+
 
 def createBuffer( name, cnt, a_in, a_out ):
     g = igraph.Graph(2, [(0,1),(1,0)], True)
