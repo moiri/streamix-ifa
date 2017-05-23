@@ -48,8 +48,8 @@ class Sia( object ):
     def get_v_init( self ):
         return self.g.vs.find( init=True ).index
 
-    def plot( self, layout="auto", x=1000, y=1000 ):
-        """plot the graph"""
+    def _plot_preprocess( self ):
+        """initialize the graph for plotting"""
         g = self.g
         g.vs['color'] = "grey"
         g.vs( init=True )['shape'] = "triangle"
@@ -62,19 +62,37 @@ class Sia( object ):
         #     for sys, val in v['subsys'].iteritems():
         #         label += str(val['state']) + "/"
         #     labels.append(label)
-
         # g.vs['label'] = labels
+
         g.vs['label'] = range( g.vcount() )
         if g.ecount() > 0:
             g.es['label'] = [ n + m for n, m in zip( g.es['name'],
                 g.es['mode'] ) ]
             g.es( weight=0 )['color'] = "blue"
-        igraph.plot( g, layout=g.layout( layout ), bbox=( 0, 0, x, y ) )
+
+    def _plot_postprocess( self ):
+        """plot the graph"""
+        g = self.g
         del g.vs['color']
         del g.vs['label']
         del g.vs['shape']
         if g.ecount() > 0:
             del g.es['label']
+            del g.es['color']
+
+    def save( self, layout="auto", x=1000, y=1000, out="out.svg" ):
+        self._plot_preprocess()
+        out = igraph.Plot( target=out, bbox=( 0, 0, x, y ), background="white" )
+        out.add( self.g, bbox=( 20, 20, x-20, y-20 ) )
+        out.save()
+        self._plot_postprocess()
+
+    def plot( self, layout="auto", x=1000, y=1000 ):
+        """plot the graph"""
+        g = self.g
+        self._plot_preprocess()
+        igraph.plot( g, layout=g.layout( layout ), bbox=( 0, 0, x, y ) )
+        self._plot_postprocess()
 
     def print_stats( self ):
         g = self.g

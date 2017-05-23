@@ -43,6 +43,7 @@ class TestSia( unittest.TestCase ):
         if self.verbose:
             pnsc.print_error()
             pnsc.sia.print_stats()
+        # pnsc.sia.save( x=1400, y=700 )
 
     def test02( self ):
         """DL-free Crossroad [live]"""
@@ -76,6 +77,7 @@ class TestSia( unittest.TestCase ):
         if self.verbose:
             pnsc.print_error()
             pnsc.sia.print_stats()
+        # pnsc.sia.save( x=1400, y=700 )
 
     def test03_nw( self ):
         """Crossroad Streaming Application NW [live]"""
