@@ -423,6 +423,9 @@ class Pnsc( object ):
             for sys in e['sys']:
                 vt_dst['action'][sys] = True
                 vg_dst['action'][sys] = True
+            for sys in vt_dst['action']:
+                vt_dst['action'][sys] |= vt_src['action'][sys]
+                vg_dst['action'][sys] |= vt_src['action'][sys]
             hasAction = self._tree_propagate_info( g, vt_dst )
             if e['weight'] > 0:
                 for sys in hasAction:
@@ -573,8 +576,8 @@ class Pnsc( object ):
         g_tree = self.g_tree
         g_tree.vs['label'] = self.mapping
         # g_tree.vs['label'] = range( g_tree.vcount() )
-        chars = ['E', 'D', 'F', 'B', 'A', 'C', 'H', 'G', 'I']
-        g_tree.vs['label'] = [ chars[c] for c in self.mapping ]
+        # chars = ['E', 'D', 'F', 'B', 'A', 'C', 'H', 'G', 'I']
+        # g_tree.vs['label'] = [ chars[c] for c in self.mapping ]
         g_tree.vs[0]['shape'] = "triangle"
         g_tree.vs['color'] = "white"
         # g_tree.vs( cycle=True )['shape'] = "diamond"
