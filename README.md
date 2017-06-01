@@ -8,6 +8,7 @@ Requires `python-igraph` package: `pip install python-igraph`
     python -m unittest <name of test file, starting with `test_`>
 
 ## Usage
+To check a system, run `check_sia.py`.
 
     usage: This script performs the folding operation on interface automata passed as graphml files
            [-h] [-f FORMAT] [-o OUTFILE] NET INFILE [INFILE ...]
