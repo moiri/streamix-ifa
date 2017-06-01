@@ -5,6 +5,7 @@ class TestGRW( unittest.TestCase ):
     @classmethod
     def setUpClass( cls ):
         cls.format = "graphml"
+        # cls.format = "gml"
         cls.maxDiff = None
 
     def test01( self ):
