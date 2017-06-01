@@ -10,9 +10,11 @@ __status__ = "Prototype"
 
 import igraph, sia
 import sys, argparse
+import igraph.vendor.texttable
 
 sys.settrace
 parser = argparse.ArgumentParser('This script performs the folding operation on interface automata passed as graphml files')
+parser.add_argument( '-p', '--plot', action='store_true', help='plot the graph of the folded system' )
 parser.add_argument( '-f', metavar="FORMAT", dest='format', choices=['graphml', 'gml'], default='graphml', help='set the format of the input graph (default: graphml)' )
 parser.add_argument( '-o', metavar="OUTFILE", dest='output', default='out', help='set the output path of the result (default: out.[FORMAT])' )
 parser.add_argument( 'net', metavar="NET", nargs=1, help='the dependency graph of the PNSC' )
@@ -28,6 +30,9 @@ def main():
 
     pnsc = sia.Pnsc( net, g_arr )
     pnsc.fold()
+    pnsc.print_error()
+
+    if args.plot: pnsc.sia.save()
 
     if args.output == parser.get_default( 'output' ):
         args.output = args.output + "." + args.format
