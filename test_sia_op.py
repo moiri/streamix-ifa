@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 import igraph, sia, unittest
 
-class TestSiaCp( unittest.TestCase ):
+class TestSia( unittest.TestCase ):
     @classmethod
     def setUpClass( cls ):
         cls.verbose = False
+        cls.plot = False
         cls.path = "test/basic_"
         cls.format = "graphml"
 
     def test01( self ):
-        """Test1 [live]"""
+        """Test1 [blocking warning: lb CP1, CP2]"""
         nw = igraph.Graph( 5, [(0,1),(1,2),(1,3),(2,4),(3,4)], True )
         nw.es['label'] = ["a", "a1", "a2", "b1", "b2"]
         nw.vs['label'] = ["A", "CP1", "A1", "A2", "CP2"]
@@ -40,13 +41,17 @@ class TestSiaCp( unittest.TestCase ):
         g4.es['weight'] = 1
 
         pnsc = sia.Pnsc( nw, [g0, g1, g2, g3, g4])
-        pnsc.fold()
-        pnsc.sia.plot()
-        # self.assertFalse( pnsc.is_blocking() )
-        # if self.verbose: pnsc.print_error()
+        pnsc.fold( self.plot )
+        if self.verbose: pnsc.print_error()
+        self.assertTrue( pnsc.is_blocking() )
+        self.assertSetEqual( set( ['CP1', 'CP2'] ),
+                set( pnsc.get_blocker() ) )
+        self.assertListEqual( [], pnsc.get_deadlocker() )
+        self.assertSetEqual( set( ['CP1', 'CP2'] ),
+                set( pnsc.get_lonelyblocker() ) )
 
     def test02( self ):
-        """Test1 [live]"""
+        """Test2 [live]"""
         nw = igraph.Graph( 2, [], True )
         nw.es['label'] = []
         nw.vs['label'] = ["CP1", "CP2"]
@@ -62,10 +67,9 @@ class TestSiaCp( unittest.TestCase ):
         g2.es['weight'] = 1
 
         pnsc = sia.Pnsc( nw, [g1, g2])
-        pnsc.fold()
-        pnsc.sia.plot()
-        # self.assertFalse( pnsc.is_blocking() )
-        # if self.verbose: pnsc.print_error()
+        pnsc.fold( self.plot )
+        if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
 
     def test03( self ):
         """Test1 [live]"""
@@ -104,7 +108,6 @@ class TestSiaCp( unittest.TestCase ):
         g5.es['weight'] = 1
 
         pnsc = sia.Pnsc( nw, [g0, g1, g2, g3, g4, g5])
-        pnsc.fold()
-        # self.assertFalse( pnsc.is_blocking() )
-        pnsc.sia.plot()
+        pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
