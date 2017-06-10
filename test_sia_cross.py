@@ -4,7 +4,8 @@ import igraph, sia, unittest
 class TestSia( unittest.TestCase ):
     @classmethod
     def setUpClass( cls ):
-        cls.verbose = True
+        cls.verbose = False
+        cls.plot = False
 
     def test01( self ):
         """Deadlocking Crossroad [blocking: dl NW,NE,SE,SW]"""
@@ -33,16 +34,16 @@ class TestSia( unittest.TestCase ):
         g4.es['weight'] = 1
 
         pnsc = sia.Pnsc( nw, [g1, g2, g3, g4])
-        pnsc.fold()
+        pnsc.fold( self.plot )
+        if self.verbose:
+            pnsc.print_error()
+            pnsc.sia.print_stats()
         self.assertTrue( pnsc.is_blocking() )
         self.assertSetEqual( set( ['NW', 'NE', 'SE', 'SW'] ),
                 set( pnsc.get_blocker() ) )
         dls = pnsc.get_deadlocker()
         self.assertSetEqual( set( ['NW', 'NE', 'SE', 'SW'] ), set( dls[0] ) )
         self.assertListEqual( [], pnsc.get_lonelyblocker() )
-        if self.verbose:
-            pnsc.print_error()
-            pnsc.sia.print_stats()
         # pnsc.sia.save( x=1400, y=700 )
 
     def test02( self ):
@@ -72,11 +73,11 @@ class TestSia( unittest.TestCase ):
         g4.es['weight'] = 1
 
         pnsc = sia.Pnsc( nw, [g1, g2, g3, g4])
-        pnsc.fold()
-        self.assertFalse( pnsc.is_blocking() )
+        pnsc.fold( self.plot )
         if self.verbose:
             pnsc.print_error()
             pnsc.sia.print_stats()
+        self.assertFalse( pnsc.is_blocking() )
         # pnsc.sia.save( x=1400, y=700 )
 
     def test03_nw( self ):
@@ -108,9 +109,9 @@ class TestSia( unittest.TestCase ):
         g6 = sia.createBuffer( "bufNr", 1, "wo_nw", "wi_ne" )
 
         pnsc = sia.Pnsc( nw, [g1, g2, g3, g4, g5, g6])
-        pnsc.fold()
-        self.assertFalse( pnsc.is_blocking() )
+        pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
         return pnsc
 
     def test03p_nw( self ):
@@ -136,9 +137,9 @@ class TestSia( unittest.TestCase ):
         g6 = sia.createBuffer( "bufNr", 1, "wo_nw", "wi_ne" )
 
         pnsc = sia.Pnsc( nw, [g1, g2, g4, g6])
-        pnsc.fold()
-        self.assertFalse( pnsc.is_blocking() )
+        pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
         return pnsc
 
     def test03pp_nw( self ):
@@ -163,9 +164,9 @@ class TestSia( unittest.TestCase ):
         g4.es['weight'] = 1
 
         pnsc = sia.Pnsc( nw, [g1, g2, g4])
-        pnsc.fold()
-        self.assertFalse( pnsc.is_blocking() )
+        pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
         return pnsc
 
     def test03_ne( self ):
@@ -197,9 +198,9 @@ class TestSia( unittest.TestCase ):
         g6 = sia.createBuffer( "bufEd", 1, "no_ne", "ni_se" )
 
         pnsc = sia.Pnsc( nw, [g1, g2, g3, g4, g5, g6])
-        pnsc.fold()
-        self.assertFalse( pnsc.is_blocking() )
+        pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
         return pnsc
 
     def test03p_ne( self ):
@@ -225,9 +226,9 @@ class TestSia( unittest.TestCase ):
         g6 = sia.createBuffer( "bufEd", 1, "no_ne", "ni_se" )
 
         pnsc = sia.Pnsc( nw, [g1, g2, g3, g6])
-        pnsc.fold()
-        self.assertFalse( pnsc.is_blocking() )
+        pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
         return pnsc
 
     def test03pp_ne( self ):
@@ -252,9 +253,9 @@ class TestSia( unittest.TestCase ):
         g3.es['weight'] = 1
 
         pnsc = sia.Pnsc( nw, [g1, g2, g3])
-        pnsc.fold()
-        self.assertFalse( pnsc.is_blocking() )
+        pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
         return pnsc
 
     def test03_se( self ):
@@ -286,9 +287,9 @@ class TestSia( unittest.TestCase ):
         g6 = sia.createBuffer( "bufSl", 1, "eo_se", "ei_sw" )
 
         pnsc = sia.Pnsc( nw, [g1, g2, g3, g4, g5, g6])
-        pnsc.fold()
-        self.assertFalse( pnsc.is_blocking() )
+        pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
         return pnsc
 
     def test03p_se( self ):
@@ -314,9 +315,9 @@ class TestSia( unittest.TestCase ):
         g6 = sia.createBuffer( "bufSl", 1, "eo_se", "ei_sw" )
 
         pnsc = sia.Pnsc( nw, [g2, g3, g4, g6])
-        pnsc.fold()
-        self.assertFalse( pnsc.is_blocking() )
+        pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
         return pnsc
 
     def test03pp_se( self ):
@@ -341,9 +342,9 @@ class TestSia( unittest.TestCase ):
         g4.es['weight'] = 1
 
         pnsc = sia.Pnsc( nw, [g2, g3, g4])
-        pnsc.fold()
-        self.assertFalse( pnsc.is_blocking() )
+        pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
         return pnsc
 
     def test03_sw( self ):
@@ -375,9 +376,9 @@ class TestSia( unittest.TestCase ):
         g6 = sia.createBuffer( "bufSr", 1, "wo_sw", "wi_se" )
 
         pnsc = sia.Pnsc( nw, [g1, g2, g3, g4, g5, g6] )
-        pnsc.fold()
-        self.assertFalse( pnsc.is_blocking() )
+        pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
         return pnsc
 
     def test03p_sw( self ):
@@ -403,9 +404,9 @@ class TestSia( unittest.TestCase ):
         g5 = sia.createBuffer( "bufWu", 1, "so_sw", "si_nw" )
 
         pnsc = sia.Pnsc( nw, [g1, g3, g4, g5] )
-        pnsc.fold()
-        self.assertFalse( pnsc.is_blocking() )
+        pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
         return pnsc
 
     def test03pp_sw( self ):
@@ -430,9 +431,9 @@ class TestSia( unittest.TestCase ):
         g4.es['weight'] = 1
 
         pnsc = sia.Pnsc( nw, [g1, g3, g4] )
-        pnsc.fold()
-        self.assertFalse( pnsc.is_blocking() )
+        pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
         return pnsc
 
     # @unittest.skip("maximum recursion depth exceeded")
@@ -446,9 +447,9 @@ class TestSia( unittest.TestCase ):
         pnsc_ne = self.test03_ne()
         pnsc_ne.sia.set_name( "cNE" )
         pnsc = sia.Pnsc( nw, [pnsc_nw.sia.g, pnsc_ne.sia.g] )
-        pnsc.fold()
-        self.assertFalse( pnsc.is_blocking() )
+        pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
         # return pnsc
 
     def test03p_all( self ):
@@ -465,16 +466,16 @@ class TestSia( unittest.TestCase ):
         pnsc_sw = self.test03p_sw()
         pnsc_sw.sia.set_name( "cSW" )
         pnsc = sia.Pnsc( nw, [pnsc_nw.sia.g, pnsc_ne.sia.g, pnsc_se.sia.g, pnsc_sw.sia.g] )
-        pnsc.fold()
+        pnsc.fold( self.plot )
+        if self.verbose:
+            pnsc.print_error()
+            pnsc.sia.print_stats()
         self.assertTrue( pnsc.is_blocking() )
         self.assertSetEqual( set( ['cNW', 'cNE', 'cSE', 'cSW'] ),
                 set( pnsc.get_blocker() ) )
         dls = pnsc.get_deadlocker()
         self.assertSetEqual( set( ['cNW', 'cNE', 'cSE', 'cSW'] ), set( dls[0] ) )
         self.assertListEqual( [], pnsc.get_lonelyblocker() )
-        if self.verbose:
-            pnsc.print_error()
-            pnsc.sia.print_stats()
 
     @unittest.skip("Automatic buffer implementation needs to be checked")
     def test03p_all_automatic( self ):
@@ -491,16 +492,16 @@ class TestSia( unittest.TestCase ):
         pnsc_sw = self.test03pp_sw()
         pnsc_sw.sia.set_name( "cSW" )
         pnsc = sia.PnscBuffer( nw, [pnsc_nw.sia.g, pnsc_ne.sia.g, pnsc_se.sia.g, pnsc_sw.sia.g] )
-        pnsc.fold()
+        pnsc.fold( self.plot )
+        if self.verbose:
+            pnsc.print_error()
+            pnsc.sia.print_stats()
         self.assertTrue( pnsc.is_blocking() )
         self.assertSetEqual( set( ['cNW', 'cNE', 'cSE', 'cSW'] ),
                 set( pnsc.get_blocker() ) )
         dls = pnsc.get_deadlocker()
         self.assertSetEqual( set( ['cNW', 'cNE', 'cSE', 'cSW'] ), set( dls[0] ) )
         self.assertListEqual( [], pnsc.get_lonelyblocker() )
-        if self.verbose:
-            pnsc.print_error()
-            pnsc.sia.print_stats()
 
     def test03pp_all( self ):
         """Crossroad Streaming Application all reduced no buffer [blocking: dl cNW,cNE,cSE,cSW]"""
@@ -516,14 +517,14 @@ class TestSia( unittest.TestCase ):
         pnsc_sw = self.test03pp_sw()
         pnsc_sw.sia.set_name( "cSW" )
         pnsc = sia.Pnsc( nw, [pnsc_nw.sia.g, pnsc_ne.sia.g, pnsc_se.sia.g, pnsc_sw.sia.g] )
-        pnsc.fold()
+        pnsc.fold( self.plot )
+        if self.verbose: pnsc.print_error()
         self.assertTrue( pnsc.is_blocking() )
         self.assertSetEqual( set( ['cNW', 'cNE', 'cSE', 'cSW'] ),
                 set( pnsc.get_blocker() ) )
         dls = pnsc.get_deadlocker()
         self.assertSetEqual( set( ['cNW', 'cNE', 'cSE', 'cSW'] ), set( dls[0] ) )
         self.assertListEqual( [], pnsc.get_lonelyblocker() )
-        if self.verbose: pnsc.print_error()
 
     @unittest.skip("maximum recursion depth exceeded")
     def test03_nwnese( self ):
@@ -538,9 +539,9 @@ class TestSia( unittest.TestCase ):
         pnsc_se = self.test03_se()
         pnsc_se.sia.set_name( "cSE" )
         pnsc = sia.Pnsc( nw, [pnsc_nw.sia.g, pnsc_ne.sia.g, pnsc_se.sia.g] )
-        pnsc.fold()
-        self.assertFalse( pnsc.is_blocking() )
+        pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
 
     def testCMeeting( self ):
         """Crossroad Meeting Example [live]"""
@@ -565,33 +566,6 @@ class TestSia( unittest.TestCase ):
         g3.es['weight'] = 1
 
         pnsc = sia.Pnsc( nw, [g1, g2, g3] )
-        pnsc.fold()
+        pnsc.fold( self.plot )
+        if self.verbose: pnsc.print_error()
         self.assertFalse( pnsc.is_blocking() )
-        if self.verbose: pnsc.print_error()
-
-    def testCMeetingMay( self ):
-        """Crossroad Meeting Example with may actions [live]"""
-        nw = igraph.Graph( 3, [(0,1), (1,2)], True )
-        nw.es['label'] =      ["s_sw","so_sw"]
-        nw.vs['label'] = ["1", "2", "3"]
-        g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-        g1['name'] = "cSWpNW"
-        g1['name'] = "1"
-        g1.es['mode'] = ["?","!","?","!"]
-        g1.es['name'] = ["wi_sw","w_sw","si_sw","s_sw"]
-        g1.es['weight'] = [0, 0, 0, 1]
-        g2 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
-        g2['name'] = "2"
-        g2.es['mode'] = ["?","!","?","!"]
-        g2.es['name'] = ["s_sw","so_sw","e_sw","eo_sw"]
-        g2.es['weight'] = [1, 1, 0, 0]
-        g3 = igraph.Graph(1, [(0,0)], True)
-        g3['name'] = "3"
-        g3.es['mode'] = ["?"]
-        g3.es['name'] = ["so_sw"]
-        g3.es['weight'] = 1
-
-        pnsc = sia.Pnsc( nw, [g1, g2, g3] )
-        pnsc.fold()
-        # self.assertFalse( pnsc.is_blocking() )
-        if self.verbose: pnsc.print_error()

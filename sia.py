@@ -340,8 +340,7 @@ class Pnsc( object ):
         for v in self.sia.g.vs():
             for idx, sys in enumerate( self.systems ):
                 state = v['subsys'][sys.name]
-                if ( ( v['end'] or not v['action'][sys.name] )
-                        and not sys.g.vs[state]['end'] ):
+                if not ( v['action'][sys.name] or sys.g.vs[state]['end'] ):
                     v['blocking'] = True
                     self._update_blocker_info( v.index, sys.name, state,
                             sys.get_actions( state ) )
