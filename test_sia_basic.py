@@ -408,3 +408,39 @@ class TestSia( unittest.TestCase ):
         pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
         self.assertFalse( pnsc.is_blocking() )
+
+    def test14( self ):
+        """Test14 [blocking: dl C,D, lb A]"""
+        nw = igraph.Graph( 4, [(0,1),(1,0),(2,3),(3,2)], True )
+        nw.es['label'] = ["a", "b", "c", "d"]
+        nw.vs['label'] = ["A", "B", "C", "D"]
+        g1 = igraph.Graph(2, [(0,1),(1,0)], True)
+        g1['name'] = "A"
+        g1.es['mode'] = ["!","?"]
+        g1.es['name'] = ["a","b"]
+        g1.es['weight'] = 1
+        g2 = igraph.Graph(1, [(0,0)], True)
+        g2['name'] = "B"
+        g2.es['mode'] = [";"]
+        g2.es['name'] = ["tb"]
+        g2.es['weight'] = 1
+        g3 = igraph.Graph(2, [(0,1),(1,0)], True)
+        g3['name'] = "C"
+        g3.es['mode'] = ["!","?"]
+        g3.es['name'] = ["c","d"]
+        g3.es['weight'] = 1
+        g4 = igraph.Graph(2, [(0,1),(1,0)], True)
+        g4['name'] = "D"
+        g4.es['mode'] = ["!","?"]
+        g4.es['name'] = ["d","c"]
+        g4.es['weight'] = 1
+
+        pnsc = sia.Pnsc( nw, [g1, g2, g3, g4])
+        pnsc.fold( self.plot )
+        if self.verbose: pnsc.print_error()
+        self.assertTrue( pnsc.is_blocking() )
+        self.assertSetEqual( set( ['A', 'C', 'D'] ),
+                set( pnsc.get_blocker() ) )
+        dls = pnsc.get_deadlocker()
+        self.assertSetEqual( set( ['C', 'D'] ), set( dls[0] ) )
+        self.assertListEqual( ['A'], pnsc.get_lonelyblocker() )
