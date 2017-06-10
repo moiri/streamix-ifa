@@ -569,3 +569,7 @@ class TestSia( unittest.TestCase ):
         pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
         self.assertFalse( pnsc.is_blocking() )
+
+if __name__ == '__main__':
+    unittest.main()
+

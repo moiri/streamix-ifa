@@ -444,3 +444,7 @@ class TestSia( unittest.TestCase ):
         dls = pnsc.get_deadlocker()
         self.assertSetEqual( set( ['C', 'D'] ), set( dls[0] ) )
         self.assertListEqual( ['A'], pnsc.get_lonelyblocker() )
+
+if __name__ == '__main__':
+    unittest.main()
+
