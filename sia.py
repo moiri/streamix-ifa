@@ -73,7 +73,6 @@ class Sia( object ):
         del g.vs['shape']
         if g.ecount() > 0:
             del g.es['label']
-            del g.es['color']
 
     def save( self, layout="auto", x=1000, y=1000, out="out.svg" ):
         self._plot_preprocess()
@@ -202,12 +201,6 @@ class Pnsc( object ):
 
         self.g_cl = None
         self.clusters = None
-
-        self.g_tree = igraph.Graph( 1, directed=True )
-        self.g_tree.vs['cycle'] = False
-        self.g_tree.vs['ok'] = False
-        self.g_tree.vs['action'] = None
-        self.mapping = []
 
     def _abstract_nw( self, nw, sia1, sia2, shared, name ):
         membership = list( range( nw.vcount() - 1 ) )
@@ -423,7 +416,6 @@ class Pnsc( object ):
         self._analyse_blocking()
         if plot: self.sia.plot()
         if plot: self.plot_cl()
-        if plot: self.plot_tree()
 
         return sia
 
@@ -443,22 +435,6 @@ class Pnsc( object ):
         del g.vs['shape']
         if g.ecount() > 0:
             del g.es['label']
-
-    def plot_tree( self, layout="auto", x=1000, y=1000 ):
-        g_tree = self.g_tree
-        g_tree.vs['label'] = self.mapping
-        # g_tree.vs['label'] = [ str(c) for c in g_tree.vs['action'] ]
-        # g_tree.vs['label'] = range( g_tree.vcount() )
-        # chars = ['E', 'D', 'F', 'B', 'A', 'C', 'H', 'G', 'I']
-        # g_tree.vs['label'] = [ chars[c] for c in self.mapping ]
-        g_tree.vs[0]['shape'] = "triangle"
-        g_tree.vs['color'] = "white"
-        # g_tree.vs( cycle=True )['shape'] = "diamond"
-        # g_tree.vs( end=True )['shape'] = "square"
-        g_tree.vs( ok=True )['color'] = "green"
-        g_tree.es['label'] = [ str(e['sys']) for e in g_tree.es ]
-        layout = g_tree.layout_reingold_tilford( root=[0] )
-        igraph.plot( g_tree, layout=layout, bbox=( 0, 0, x, y ) )
 
     def print_error( self ):
         if self.is_blocking():
