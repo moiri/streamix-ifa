@@ -225,7 +225,9 @@ class Pnsc( object ):
         if self.sia == None:
             print "ERROR: no abstarcted SIA defined"
             return
-        self._unfold()
+        self._collapse()
+        self._propagate_info( self.g_cl, self.g_cl.vs.find( init=True ) )
+        self._expand()
         self._set_blocking_info()
         self._separate_blocker()
 
@@ -244,7 +246,23 @@ class Pnsc( object ):
         # the cluster_graph method would)
         self.g_cl.simplify( loops=False,
                 combine_edges={'sys':self._combine_sys} )
+
+        # init vertex parameters
+        hasAction = {}
+        for sys in self.systems:
+            hasAction[sys.name] = False
+        for v in self.g_cl.vs:
+            v['action'] = dict( hasAction )
         self.g_cl.vs['visited'] = False
+
+        # assign loop edge attributes to vertices and remove loops
+        loops = self.g_cl.is_loop( self.g_cl.es )
+        es = [e_id for e_id, is_loop in enumerate( loops ) if is_loop]
+        for e_id in es:
+            e = self.g_cl.es[e_id]
+            for sys in e['sys']:
+                self.g_cl.vs[e.target]['action'][sys] = True
+        self.g_cl.delete_edges( es )
 
     def _combine_sys( self, attrs ):
         sys = []
@@ -337,18 +355,6 @@ class Pnsc( object ):
                     v['blocking'] = True
                     self._update_blocker_info( v.index, sys.name, state,
                             sys.get_actions( state ) )
-
-    def _unfold( self ):
-        g = self.sia.g
-        self._collapse()
-        g = self.g_cl
-        hasAction = {}
-        for sys in self.systems:
-            hasAction[sys.name] = False
-        for v in g.vs:
-            v['action'] = dict( hasAction )
-        self._propagate_info( g, g.vs[0] )
-        self._expand()
 
     def _update_blocker_info( self, state_pnsc, name, state, actions ):
         if len( actions ) == 0: return
