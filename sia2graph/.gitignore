@@ -1,0 +1,10 @@
+*.swp
+*.tab.c
+*.tab.h
+*.yy.c
+*.pyc
+*.output
+*.dot
+*.pdf
+out.*
+sia2graph
