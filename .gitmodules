@@ -1,3 +1,0 @@
-[submodule "sia2graph/uthash"]
-	path = sia2graph/uthash
-	url = https://github.com/troydhanson/uthash.git
