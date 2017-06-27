@@ -6,5 +6,6 @@
 *.output
 *.dot
 *.pdf
-out.*
+*.gml
+*.graphml
 sia2graph

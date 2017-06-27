@@ -13,90 +13,156 @@
 #include "igraph.h"
 
 // TYPEDEFS -------------------------------------------------------------------
-typedef struct sia_vertex_s sia_vertex_t;
-typedef struct sia_vertices_s sia_vertices_t;
-typedef struct sia_target_s sia_target_t;
-typedef struct sia_targets_s sia_targets_t;
+typedef struct sia_s sia_t;
+typedef struct sias_s sias_t;
+typedef struct sia_state_s sia_state_t;
+typedef struct sia_states_s sia_states_t;
+typedef struct sia_transition_s sia_transition_t;
+typedef struct sia_transitions_s sia_transitions_t;
+typedef enum sia_format_e sia_format_t;
+
+enum sia_format_e
+{
+    FMT_GRAPHML,
+    FMT_GML
+};
+
 
 // STRUCTS --------------------------------------------------------------------
 /**
- * @brief State structure of a SIA
+ * @brief structure of a SIA
  */
-struct sia_vertex_s
+struct sia_s
 {
-    const char*     name;       /**< name of the state (hash key) */
-    int             id;         /**< id number of the state */
-    sia_targets_t*  targets;    /**< ::sia_targets_s */
+    char*           name;       /**< name of the SIA (hash key) */
+    sia_states_t*   states;     /**< ::sia_states_s */
+    sia_state_t*    symbols;    /**< ::sia_states_s */
     UT_hash_handle  hh;         /**< makes this structure hashable */
+};
+
+/**
+ * @brief structure of a list of SIAs
+ */
+struct sias_s
+{
+    sia_t*  sia;        /**< ::sia_s */
+    sias_t* next;       /**< ::sias_s, pointer to next elem */
+};
+
+/**
+ * @brief state structure of a SIA
+ */
+struct sia_state_s
+{
+    char*               name;           /**< name of the start state (hh key) */
+    int                 id;             /**< id number of the state */
+    sia_transitions_t*  transitions;    /**< ::sia_transitions_s */
+    UT_hash_handle      hh;             /**< makes this structure hashable */
 };
 
 /**
  * @brief List of state structures of a SIA
  */
-struct sia_vertices_s
+struct sia_states_s
 {
-    sia_vertex_t*   vertex;     /**< ::sia_vertex_s */
-    sia_vertices_t* next;       /**< ::sia_vertices_s, pointer to next elem */
+    sia_state_t*   state; /**< ::sia_state_s */
+    sia_states_t*  next;  /**< ::sia_states_s, pointer to next elem */
 };
 
 /**
- * @brief Target of a SIA state
+ * @brief transition from a SIA state to a SIA state, triggered by an action
  */
-struct sia_target_s
+struct sia_transition_s
 {
-    const char*     name;       /**< name of the action */
-    char            mode;       /**< mode of the action */
-    const char*     vertex;     /**< name of target state */
+    char*       action;     /**< name of the action */
+    const char* mode;       /**< mode of the action */
+    char*       label;
+    char*       state;      /**< name of target state */
 };
 
 /**
- * @brief List of target structures of a SIA state
+ * @brief List of transition structures from a SIA state
  */
-struct sia_targets_s
+struct sia_transitions_s
 {
-    sia_target_t*   target;     /**< ::sia_target_s */
-    sia_targets_t*  next;       /**< ::sia_targets_s, pointer to next elem */
+    sia_transition_t*   transition; /**< ::sia_transition_s */
+    sia_transitions_t*  next;       /**< ::sia_transitions_s, pointer to next elem */
 };
 
 // FUNCTIONS ------------------------------------------------------------------
 /**
- * @brief   Create and return a target structure.
+ * @brief   Add a sia to a list and return the list structure.
  *
- * @param const char*       name of the action
- * @param char              mode of the action
- * @param const char*       name of the target state
- * @return sia_target_t*    pointer to the created structure
+ * @param sia_t*     pointer to the sia to add
+ * @param sias_t*    pointer to the list the sia is added
+ * @return sias_t*   pointer to the list structure
  */
-sia_target_t* sia_create_target( const char*, char, const char* );
+sias_t* sia_add( sia_t*, sias_t* );
 
 /**
- * @brief   Add a target structure to a target list and return list structure.
+ * @brief   Add a state to a list of states and return the list structure.
  *
- * @param sia_target_t*     pointer to the target structure to add
- * @param sia_targets_t*    pointer to the target list the target is added
- * @return sia_targets_t*   pointer to the list structure
+ * @param sia_state_t*      pointer to the state structure to add
+ * @param sia_states_t*     pointer to the list the state is added
+ * @return sia_states_t*    pointer to the list structure
  */
-sia_targets_t* sia_add_target( sia_target_t*, sia_targets_t* );
+sia_states_t* sia_add_state( sia_state_t*, sia_states_t* );
+
+/**
+ * @brief   Add a transition to a list and return the list structure.
+ *
+ * @param sia_transition_t*     pointer to the transition to add
+ * @param sia_transitions_t*    pointer to the list the transition is added
+ * @return sia_transitions_t*   pointer to the list structure
+ */
+sia_transitions_t* sia_add_transition( sia_transition_t*, sia_transitions_t* );
+
+/**
+ *
+ */
+void sia_check( sias_t*, sia_format_t, const char* );
+
+/**
+ *
+ */
+void sia_check_duplicate( igraph_t*, sia_states_t*, sia_state_t** );
+
+/**
+ *
+ */
+void sia_check_undefined( igraph_t*, sia_state_t** );
+
+/**
+ * @brief   Create and return a sia structure.
+ *
+ * @param char*             name of the sia
+ * @param sia_states_t*     pointer to a list of states
+ * @return sia_t*           pointer to the created structure
+ */
+sia_t* sia_create( char*, sia_states_t* );
 
 /**
  * @brief   Create and return a state structure.
  *
- * @param const char*       name of the state
- * @param sia_targets_t*    pointer to the a list of targets
- * @return sia_vertex_t*    pointer to the created structure
+ * @param char*                 name of the state
+ * @param sia_transitions_t*    pointer to the a list of transitions
+ * @return sia_state_t*         pointer to the created structure
  */
-sia_vertex_t* sia_create_vertex( const char*, sia_targets_t* );
+sia_state_t* sia_create_state( char*, sia_transitions_t* );
 
 /**
- * @brief   Add a state structure to a list of states and return list structure.
+ * @brief   Create and return a transition structure.
  *
- * @param sia_vertex_t*     pointer to the state structure to add
- * @param sia_vertices_t*   pointer to the list of states the state is added
- * @return sia_vertices_t*  pointer to the list structure
+ * @param char*                 name of the action
+ * @param const char*           mode of the action
+ * @param char*                 name of the target state
+ * @return sia_transition_t*    pointer to the created structure
  */
-sia_vertices_t* sia_add_vertex( sia_vertex_t*, sia_vertices_t* );
+sia_transition_t* sia_create_transition( char*, const char*, char* );
 
-void sia_check_duplicate( igraph_t*, sia_vertices_t*, sia_vertex_t** );
-void sia_check_undefined( igraph_t*, sia_vertex_t** );
+/**
+ *
+ */
+void sia_destroy( sias_t* );
 
 #endif /* SIA_H */

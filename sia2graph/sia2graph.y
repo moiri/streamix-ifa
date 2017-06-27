@@ -9,75 +9,81 @@
 %{
 /* Prologue */
     #include "sia.h"
-    #include <stdio.h>
     extern int yylex();
-    void yyerror ( void** sia, const char* s )
-    {
-        printf( "%s\n", s );
-    }
+    extern int yyerror( void*, const char* );
 %}
 
 /* Bison declarations */
-%parse-param { void** sia }
+%parse-param { void** sias }
 %define parse.error verbose
 %define parse.lac full
 %locations
 %union {
     int ival;
-    char cval;
     char *sval;
-    struct sia_vertex_s* vval;
-    struct sia_vertices_s* vsval;
-    struct sia_target_s* tval;
-    struct sia_targets_s* tsval;
+    struct sia_s* rval;
+    struct sias_s* rsval;
+    struct sia_state_s* vval;
+    struct sia_states_s* vsval;
+    struct sia_transition_s* tval;
+    struct sia_transitions_s* tsval;
 };
 
-%type <vval> stmt
-%type <vsval> stmts
-%type <vsval> sia
+%token KW_SIA
+%token <sval> IDENTIFIER
+%type <rval> sia
+%type <rsval> sias
+%type <vval> state
+%type <vsval> states
 %type <tval> transition
 %type <tsval> transition_opt
-%type <cval> action_mode
+%type <sval> action_mode
 
-/* idenitifiers */
-%token <sval> IDENTIFIER
-
-%start sia
+%start program
 
 %%
 /* Grammar rules */
 /* start of the grammer */
 
+program:
+    sias { *sias = $1; }
+
+sias:
+    %empty { $$ = ( sias_t* )0; }
+|   sia sias { $$ = sia_add( $1, $2 ); }
+
 sia:
-    stmts { *sia = $1; }
+    KW_SIA IDENTIFIER '{' state states '}' {
+        $$ = sia_create( $2, sia_add_state( $4, $5 ) );
+    }
 ;
 
-stmts:
-    %empty { $$ = ( sia_vertices_t* )0; }
-|   stmt stmts { $$ = sia_add_vertex( $1, $2 ); }
+states:
+    %empty { $$ = ( sia_states_t* )0; }
+|   state states { $$ = sia_add_state( $1, $2 ); }
 ;
 
-stmt:
+state:
     IDENTIFIER ':' transition transition_opt {
-        $$ = sia_create_vertex( $1, sia_add_target( $3, $4 ) );
+        $$ = sia_create_state( $1, sia_add_transition( $3, $4 ) );
     }
 ;
 
 transition:
     IDENTIFIER action_mode '.' IDENTIFIER {
-        $$ = sia_create_target( $1, $2, $4 );
+        $$ = sia_create_transition( $1, $2, $4 );
     }
 ;
 
 transition_opt:
-    %empty { $$ = ( sia_targets_t* )0; }
-|   '|' transition transition_opt { $$ = sia_add_target( $2, $3 ); }
+    %empty { $$ = ( sia_transitions_t* )0; }
+|   '|' transition transition_opt { $$ = sia_add_transition( $2, $3 ); }
 ;
 
 action_mode:
-    '?' { $$ = '?'; }
-|   '!' { $$ = '!'; }
-|   ';' { $$ = ';'; }
+    '?' { $$ = "?"; }
+|   '!' { $$ = "!"; }
+|   ';' { $$ = ";"; }
 ;
 
 %%
