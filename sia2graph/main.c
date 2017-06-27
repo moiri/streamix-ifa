@@ -20,6 +20,7 @@ int main( int argc, char **argv ) {
     FILE* src_smx;
     int c;
     sia_format_t format_e;
+    sia_t* symbols;
 
     while( ( c = getopt( argc, argv, "hvo:f:" ) ) != -1 )
         switch( c ) {
@@ -84,7 +85,7 @@ int main( int argc, char **argv ) {
 
     if( sias == NULL ) return -1;
 
-    sia_check( sias, format_e, out_path );
+    sia_check( sias, format_e, out_path, &symbols );
 
     /* if( yynerrs > 0 ) printf( " Error count: %d\n", yynerrs ); */
 

@@ -51,7 +51,8 @@ clean:
 	rm -f $(PROJECT).output
 	rm -f $(PROJECT)
 	rm -f lex.yy.c
-	rm -f out.*
+	rm -f *.graphml
+	rm -f *.gml
 
 install:
 	mkdir -p /usr/local/bin

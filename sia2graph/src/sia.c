@@ -41,8 +41,10 @@ sia_transitions_t* sia_add_transition( sia_transition_t* transition,
 }
 
 /******************************************************************************/
-void sia_check( sias_t* sias, sia_format_t format, const char* out_path )
+void sia_check( sias_t* sias, sia_format_t format, const char* out_path,
+        sia_t** symbols )
 {
+    sia_t* sia;
     FILE* out_file;
     char* out_file_name = NULL;
     const char* format_str;
@@ -59,6 +61,13 @@ void sia_check( sias_t* sias, sia_format_t format, const char* out_path )
     }
 
     while( sias != NULL ) {
+        HASH_FIND_STR( *symbols, sias->sia->name, sia );
+        if( sia != NULL ) {
+            printf( "ERROR: redefinition of '%s'\n", sias->sia->name );
+            sias = sias->next;
+            continue;
+        }
+        HASH_ADD_STR( *symbols, name, sias->sia );
         sias->sia->symbols = NULL;
         igraph_empty( &g, 0, true );
         sia_check_duplicate( &g, sias->sia->states, &sias->sia->symbols );
@@ -95,15 +104,16 @@ void sia_check_duplicate( igraph_t* g, sia_states_t* sia,
     sia_state_t* state;
     while( sia != NULL ) {
         HASH_FIND_STR( *symbols, sia->state->name, state );
-        if( state == NULL ) {
-            id = igraph_vcount( g );
-            igraph_add_vertices( g, 1, NULL );
-            igraph_cattribute_VAS_set( g, "label", id, sia->state->name );
-            sia->state->id = id;
-            HASH_ADD_STR( *symbols, name, sia->state );
-        }
-        else
+        if( state != NULL ) {
             printf( "ERROR: redefinition of '%s'\n", sia->state->name );
+            sia = sia->next;
+            continue;
+        }
+        id = igraph_vcount( g );
+        igraph_add_vertices( g, 1, NULL );
+        igraph_cattribute_VAS_set( g, "label", id, sia->state->name );
+        sia->state->id = id;
+        HASH_ADD_STR( *symbols, name, sia->state );
         sia = sia->next;
     }
 }

@@ -21,10 +21,13 @@ typedef struct sia_transition_s sia_transition_t;
 typedef struct sia_transitions_s sia_transitions_t;
 typedef enum sia_format_e sia_format_t;
 
+/**
+ * @brief graph formats of the sia
+ */
 enum sia_format_e
 {
-    FMT_GRAPHML,
-    FMT_GML
+    FMT_GRAPHML,    /**< http://graphml.graphdrawing.org/ */
+    FMT_GML         /**< https://en.wikipedia.org/wiki/Graph_Modelling_Language */
 };
 
 
@@ -118,17 +121,35 @@ sia_states_t* sia_add_state( sia_state_t*, sia_states_t* );
 sia_transitions_t* sia_add_transition( sia_transition_t*, sia_transitions_t* );
 
 /**
+ * @brief check context of sias
  *
+ * Checks for duplicate identifiers and creates a graph for each sia
+ *
+ * @param sias_t*       a pointer to the list of sia structures
+ * @param const char*   name of the sia
+ * @param sia_t**       pointer to the symbol table of sias
  */
-void sia_check( sias_t*, sia_format_t, const char* );
+void sia_check( sias_t*, sia_format_t, const char*, sia_t** );
 
 /**
+ * @brief check for duplicate states in a sia
  *
+ * Each state definition is stored in a symbol table and for each state a
+ * vertex in the sia graph is created
+ *
+ * @param igraph_t*     pointer to the graph
+ * @param sia_states_t* pointer to the list of sia states
+ * @param sia_state_t** pointer to the symbol table of states
  */
 void sia_check_duplicate( igraph_t*, sia_states_t*, sia_state_t** );
 
 /**
+ * @brief check for undefined state names in a sia
  *
+ * Each transition is added as an edge to the sia graph
+ *
+ * @param igraph_t*     pointer to the graph
+ * @param sia_state_t** pointer to the symbol table of states
  */
 void sia_check_undefined( igraph_t*, sia_state_t** );
 
@@ -161,7 +182,9 @@ sia_state_t* sia_create_state( char*, sia_transitions_t* );
 sia_transition_t* sia_create_transition( char*, const char*, char* );
 
 /**
+ * @brief destroy all sia structures and its corresponding sub structures
  *
+ * @param sias_t*   pointer to the list of sias
  */
 void sia_destroy( sias_t* );
 
