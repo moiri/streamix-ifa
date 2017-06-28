@@ -10,7 +10,7 @@ class TestSia( unittest.TestCase ):
     def test01( self ):
         """Deadlocking Crossroad [blocking: dl NW,NE,SE,SW]"""
         nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(3,0)], True )
-        nw.es['label'] = ["w", "n", "e", "s"]
+        nw.es['sia'] = ["w", "n", "e", "s"]
         nw.vs['label'] = ["NW", "NE", "SE", "SW"]
         g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
         g1['name'] = "NW"
@@ -49,7 +49,7 @@ class TestSia( unittest.TestCase ):
     def test02( self ):
         """DL-free Crossroad [live]"""
         nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(0,3)], True )
-        nw.es['label'] = ["w", "n", "e", "s"]
+        nw.es['sia'] = ["w", "n", "e", "s"]
         nw.vs['label'] = ["NW'", "NE", "SE", "SW'"]
         g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
         g1['name'] = "NW'"
@@ -83,7 +83,7 @@ class TestSia( unittest.TestCase ):
     def test03_nw( self ):
         """Crossroad Streaming Application NW [live]"""
         nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(0,3),(2,5),(1,4)], True )
-        nw.es['label'] = ["w_nw", "n_nw", "e_nw", "s_nw", "no_nw", "wo_nw"]
+        nw.es['sia'] = ["w_nw", "n_nw", "e_nw", "s_nw", "no_nw", "wo_nw"]
         nw.vs['label'] = ["cNWpNW", "cNWpNE", "cNWpSE", "cNWpSW", "bufNr", "bufWd"]
         g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
         g1['name'] = "cNWpNW"
@@ -117,7 +117,7 @@ class TestSia( unittest.TestCase ):
     def test03p_nw( self ):
         """Crossroad Streaming Application NW reduced [live]"""
         nw = igraph.Graph( 4, [(0,1),(0,2),(1,3)], True )
-        nw.es['label'] = ["w_nw", "s_nw", "wo_nw"]
+        nw.es['sia'] = ["w_nw", "s_nw", "wo_nw"]
         nw.vs['label'] = ["cNWpNW", "cNWpNE", "cNWpSW", "bufNr"]
         g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
         g1['name'] = "cNWpNW"
@@ -145,7 +145,7 @@ class TestSia( unittest.TestCase ):
     def test03pp_nw( self ):
         """Crossroad Streaming Application NW reduced no buffer [live]"""
         nw = igraph.Graph( 3, [(0,1),(0,2)], True )
-        nw.es['label'] = ["w_nw", "s_nw"]
+        nw.es['sia'] = ["w_nw", "s_nw"]
         nw.vs['label'] = ["cNWpNW", "cNWpNE", "cNWpSW"]
         g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
         g1['name'] = "cNWpNW"
@@ -172,7 +172,7 @@ class TestSia( unittest.TestCase ):
     def test03_ne( self ):
         """Crossroad Streaming Application NE [live]"""
         nw = igraph.Graph( 6, [(0,1),(1,2),(2,3),(0,3),(3,4),(2,5)], True )
-        nw.es['label'] = ["w_ne", "n_ne", "e_ne", "s_ne", "eo_ne", "no_ne"]
+        nw.es['sia'] = ["w_ne", "n_ne", "e_ne", "s_ne", "eo_ne", "no_ne"]
         nw.vs['label'] = ["cNEpNW", "cNEpNE", "cNEpSE", "cNEpSW", "bufNl", "bufEd"]
         g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
         g1['name'] = "cNEpNW"
@@ -206,7 +206,7 @@ class TestSia( unittest.TestCase ):
     def test03p_ne( self ):
         """Crossroad Streaming Application NE reduced [live]"""
         nw = igraph.Graph( 4, [(0,1),(1,2),(2,3)], True )
-        nw.es['label'] = ["w_ne", "n_ne", "no_ne"]
+        nw.es['sia'] = ["w_ne", "n_ne", "no_ne"]
         nw.vs['label'] = ["cNEpNW", "cNEpNE", "cNEpSE", "bufEd"]
         g1 = igraph.Graph(2, [(0,1),(1,0)], True)
         g1['name'] = "cNEpNW"
@@ -234,7 +234,7 @@ class TestSia( unittest.TestCase ):
     def test03pp_ne( self ):
         """Crossroad Streaming Application NE reduced no buffer [live]"""
         nw = igraph.Graph( 3, [(0,1),(1,2)], True )
-        nw.es['label'] = ["w_ne", "n_ne"]
+        nw.es['sia'] = ["w_ne", "n_ne"]
         nw.vs['label'] = ["cNEpNW", "cNEpNE", "cNEpSE"]
         g1 = igraph.Graph(2, [(0,1),(1,0)], True)
         g1['name'] = "cNEpNW"
@@ -261,7 +261,7 @@ class TestSia( unittest.TestCase ):
     def test03_se( self ):
         """Crossroad Streaming Application SE [live]"""
         nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(0,3),(3,4),(3,5)], True )
-        nw.es['label'] = ["w_se", "n_se", "e_se", "s_se", "so_se", "eo_se"]
+        nw.es['sia'] = ["w_se", "n_se", "e_se", "s_se", "so_se", "eo_se"]
         nw.vs['label'] = ["cSEpNW", "cSEpNE", "cSEpSE", "cSEpSW", "bufEu", "bufSl"]
         g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
         g1['name'] = "cSEpNW"
@@ -295,7 +295,7 @@ class TestSia( unittest.TestCase ):
     def test03p_se( self ):
         """Crossroad Streaming Application SE reduced [live]"""
         nw = igraph.Graph( 4, [(0,1),(1,2),(2,3)], True )
-        nw.es['label'] = ["n_se", "e_se", "eo_se"]
+        nw.es['sia'] = ["n_se", "e_se", "eo_se"]
         nw.vs['label'] = ["cSEpNE", "cSEpSE", "cSEpSW", "bufSl"]
         g2 = igraph.Graph(2, [(0,1),(1,0)], True)
         g2['name'] = "cSEpNE"
@@ -323,7 +323,7 @@ class TestSia( unittest.TestCase ):
     def test03pp_se( self ):
         """Crossroad Streaming Application SE reduced no buffer [live]"""
         nw = igraph.Graph( 3, [(0,1),(1,2)], True )
-        nw.es['label'] = ["n_se", "e_se"]
+        nw.es['sia'] = ["n_se", "e_se"]
         nw.vs['label'] = ["cSEpNE", "cSEpSE", "cSEpSW"]
         g2 = igraph.Graph(2, [(0,1),(1,0)], True)
         g2['name'] = "cSEpNE"
@@ -350,7 +350,7 @@ class TestSia( unittest.TestCase ):
     def test03_sw( self ):
         """Crossroad Streaming Application SW [live]"""
         nw = igraph.Graph( 4, [(0,1), (1,2), (2,3), (0,3), (3,4),  (1,5)], True )
-        nw.es['label'] =      ["w_sw","n_sw","e_sw","s_sw","so_sw","wo_sw"]
+        nw.es['sia'] =      ["w_sw","n_sw","e_sw","s_sw","so_sw","wo_sw"]
         nw.vs['label'] = ["cSWpNW", "cSWpNE", "cSWpSE", "cSWpSW", "bufWu", "bufSr"]
         g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
         g1['name'] = "cSWpNW"
@@ -384,7 +384,7 @@ class TestSia( unittest.TestCase ):
     def test03p_sw( self ):
         """Crossroad Streaming Application SW reduced [live]"""
         nw = igraph.Graph( 4, [(1,2), (0,2), (2,3)], True )
-        nw.es['label'] =      ["e_sw","s_sw","so_sw"]
+        nw.es['sia'] =      ["e_sw","s_sw","so_sw"]
         nw.vs['label'] = ["cSWpNW", "cSWpSE", "cSWpSW", "bufWu"]
         g1 = igraph.Graph(2, [(0,1),(1,0)], True)
         g1['name'] = "cSWpNW"
@@ -412,7 +412,7 @@ class TestSia( unittest.TestCase ):
     def test03pp_sw( self ):
         """Crossroad Streaming Application SW reduced no buffer [live]"""
         nw = igraph.Graph( 3, [(1,2), (0,2)], True )
-        nw.es['label'] =      ["e_sw","s_sw"]
+        nw.es['sia'] =      ["e_sw","s_sw"]
         nw.vs['label'] = ["cSWpNW", "cSWpSE", "cSWpSW"]
         g1 = igraph.Graph(2, [(0,1),(1,0)], True)
         g1['name'] = "cSWpNW"
@@ -440,7 +440,7 @@ class TestSia( unittest.TestCase ):
     def test03_nwne( self ):
         """Crossroad Streaming Application NWNE [live]"""
         nw = igraph.Graph( 2, [(0,1),  (1,0)], True )
-        nw.es['label'] =      ["wi_ne","ei_nw"]
+        nw.es['sia'] =      ["wi_ne","ei_nw"]
         nw.vs['label'] = ["cNW", "cNE"]
         pnsc_nw = self.test03_nw()
         pnsc_nw.sia.set_name( "cNW" )
@@ -455,7 +455,7 @@ class TestSia( unittest.TestCase ):
     def test03p_all( self ):
         """Crossroad Streaming Application all reduced [blocking: dl cNW,cNE,cSE,cSW]"""
         nw = igraph.Graph( 4, [(0, 1), (1, 2),  (2, 3),  (3, 0)], True )
-        nw.es['label'] =      ["wi_ne","ni_se", "ei_sw", "si_nw"]
+        nw.es['sia'] =      ["wi_ne","ni_se", "ei_sw", "si_nw"]
         nw.vs['label'] = ["cNW", "cNE", "cSE", "cSW"]
         pnsc_nw = self.test03p_nw()
         pnsc_nw.sia.set_name( "cNW" )
@@ -481,7 +481,7 @@ class TestSia( unittest.TestCase ):
     def test03p_all_automatic( self ):
         """Crossroad Streaming Application all reduced automatic buffer [blocking: dl cNW,cNE,cSE,cSW]"""
         nw = igraph.Graph( 4, [(0, 1), (1, 2),  (2, 3),  (3, 0)], True )
-        nw.es['label'] =      ["wi_ne","ni_se", "ei_sw", "si_nw"]
+        nw.es['sia'] =      ["wi_ne","ni_se", "ei_sw", "si_nw"]
         nw.vs['label'] = ["cNW", "cNE", "cSE", "cSW"]
         pnsc_nw = self.test03pp_nw()
         pnsc_nw.sia.set_name( "cNW" )
@@ -506,7 +506,7 @@ class TestSia( unittest.TestCase ):
     def test03pp_all( self ):
         """Crossroad Streaming Application all reduced no buffer [blocking: dl cNW,cNE,cSE,cSW]"""
         nw = igraph.Graph( 4, [(0, 1), (1, 2),  (2, 3),  (3, 0)], True )
-        nw.es['label'] =      ["wi_ne","ni_se", "ei_sw", "si_nw"]
+        nw.es['sia'] =      ["wi_ne","ni_se", "ei_sw", "si_nw"]
         nw.vs['label'] = ["cNW", "cNE", "cSE", "cSW"]
         pnsc_nw = self.test03pp_nw()
         pnsc_nw.sia.set_name( "cNW" )
@@ -530,7 +530,7 @@ class TestSia( unittest.TestCase ):
     def test03_nwnese( self ):
         """Crossroad Streaming Application NWNESE [live]"""
         nw = igraph.Graph( 3, [(0,1),  (1,0), (1,2), (2,1)], True )
-        nw.es['label'] =      ["wi_ne","ei_nw", "si_se", "ni_ne"]
+        nw.es['sia'] =      ["wi_ne","ei_nw", "si_se", "ni_ne"]
         nw.vs['label'] = ["cNW", "cNE"]
         pnsc_nw = self.test03_nw()
         pnsc_nw.sia.set_name( "cNW" )
@@ -546,7 +546,7 @@ class TestSia( unittest.TestCase ):
     def testCMeeting( self ):
         """Crossroad Meeting Example [live]"""
         nw = igraph.Graph( 3, [(0,1), (1,2)], True )
-        nw.es['label'] =      ["s_sw","so_sw"]
+        nw.es['sia'] =      ["s_sw","so_sw"]
         nw.vs['label'] = ["1", "2", "3"]
         g1 = igraph.Graph(3, [(0,1),(1,0),(0,2),(2,0)], True)
         g1['name'] = "cSWpNW"

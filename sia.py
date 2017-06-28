@@ -217,7 +217,7 @@ class Pnsc( object ):
         g = cluster.cluster_graph( combine_vertices='first',
                 combine_edges=False )
         if g.ecount() > 0:
-            g.delete_edges( g.es( label_in=shared ) )
+            g.delete_edges( g.es( sia_in=shared ) )
         g.vs[new_id]['label'] = name
         return g
 
@@ -279,7 +279,7 @@ class Pnsc( object ):
     def _get_dependency( self, name, actions ):
         nw = self.nw
         dependency = []
-        for e in nw.es( label_in=actions ):
+        for e in nw.es( sia_in=actions ):
             dst = nw.vs[e.target]['label']
             src = nw.vs[e.source]['label']
             if dst == name and src not in dependency:
@@ -292,7 +292,7 @@ class Pnsc( object ):
         shared = []
         g_sub = nw.vs( label_in=[name1, name2] ).subgraph()
         for e in g_sub.es:
-            shared.append( e['label'] )
+            shared.append( e['sia'] )
         return shared
 
     def _init_systems( self, gs_sia):
