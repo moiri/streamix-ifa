@@ -4,8 +4,8 @@ import igraph, sia, unittest
 class TestSia( unittest.TestCase ):
     @classmethod
     def setUpClass( cls ):
-        cls.verbose = False
-        cls.plot = False
+        cls.verbose = True
+        cls.plot = True
         cls.path = "test/basic_"
         cls.format = "graphml"
 
@@ -111,6 +111,68 @@ class TestSia( unittest.TestCase ):
         pnsc.fold( self.plot )
         if self.verbose: pnsc.print_error()
         self.assertFalse( pnsc.is_blocking() )
+
+    def test04( self ):
+        """Decoupled [live]"""
+        nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(3,0)], True )
+        nw.es['sia'] = ["a", "a'", "b", "b'"]
+        nw.vs['label'] = ["A", "b1", "B", "b2"]
+        g0 = igraph.Graph( 2, [(0,1),(1,0)], True )
+        g0['name'] = "A"
+        g0.es['mode'] = ["?","!"]
+        g0.es['name'] = ["b'","a"]
+        g0.es['weight'] = 1
+        g1 = igraph.Graph( 2, [(0,0),(0,1),(1,1),(1,0)], True )
+        g1['name'] = "b1"
+        g1.es['mode'] = ["!","?","?","!"]
+        g1.es['name'] = ["a'","a","a","a'"]
+        g1.es['weight'] = 1
+        g2 = igraph.Graph( 2, [(0,1),(1,0)], True )
+        g2['name'] = "B"
+        g2.es['mode'] = ["?","!"]
+        g2.es['name'] = ["a'","b"]
+        g2.es['weight'] = 1
+        g3 = igraph.Graph( 2, [(0,0),(0,1),(1,1),(1,0)], True )
+        g3['name'] = "b2"
+        g3.es['mode'] = ["!","?","?","!"]
+        g3.es['name'] = ["b'","b","b","b'"]
+        g3.es['weight'] = 1
+
+        pnsc = sia.Pnsc( nw, [g0, g1, g2, g3])
+        pnsc.fold( self.plot )
+        if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
+
+    def test05( self ):
+        """Not decouplde [blocking]"""
+        nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(3,0)], True )
+        nw.es['sia'] = ["a", "a'", "b", "b'"]
+        nw.vs['label'] = ["A", "b1", "B", "b2"]
+        g0 = igraph.Graph( 2, [(0,1),(1,0)], True )
+        g0['name'] = "A"
+        g0.es['mode'] = ["?","!"]
+        g0.es['name'] = ["b'","a"]
+        g0.es['weight'] = 1
+        g1 = igraph.Graph( 2, [(0,1),(1,0)], True )
+        g1['name'] = "b1"
+        g1.es['mode'] = ["?","!"]
+        g1.es['name'] = ["a","a'"]
+        g1.es['weight'] = 1
+        g2 = igraph.Graph( 2, [(0,1),(1,0)], True )
+        g2['name'] = "B"
+        g2.es['mode'] = ["?","!"]
+        g2.es['name'] = ["a'","b"]
+        g2.es['weight'] = 1
+        g3 = igraph.Graph( 2, [(0,1),(1,0)], True )
+        g3['name'] = "b2"
+        g3.es['mode'] = ["?","!"]
+        g3.es['name'] = ["b","b'"]
+        g3.es['weight'] = 1
+
+        pnsc = sia.Pnsc( nw, [g0, g1, g2, g3])
+        pnsc.fold( self.plot )
+        if self.verbose: pnsc.print_error()
+        self.assertTrue( pnsc.is_blocking() )
 
 if __name__ == '__main__':
     unittest.main()
