@@ -13,7 +13,7 @@ class TestSia( unittest.TestCase ):
         """Test1 [live]"""
         nw = igraph.Graph( 2, [(0,1),(0,1)], True )
         nw.es['sia'] = ["a", "b"]
-        nw.vs['label'] = ["A", "B"]
+        nw.vs['sia'] = ["A", "B"]
         g1 = igraph.Graph( 3, [(0,1),(0,2)], True )
         g1['name'] = "A"
         g1.es['mode'] = ["!","!"]
@@ -34,7 +34,7 @@ class TestSia( unittest.TestCase ):
         """Test2 [blocking: dl A,B]"""
         nw = igraph.Graph( 2, [(0,1),(0,1)], True )
         nw.es['sia'] = ["a", "b"]
-        nw.vs['label'] = ["A", "B"]
+        nw.vs['sia'] = ["A", "B"]
         g1 = igraph.Graph(5, [(0,1),(0,2),(1,3),(2,4)], True)
         g1['name'] = "A"
         g1.es['mode'] = [";",";","!","!"]
@@ -59,7 +59,7 @@ class TestSia( unittest.TestCase ):
         """Test3 [live]"""
         nw = igraph.Graph( 2, [], True )
         nw.es['sia'] = None
-        nw.vs['label'] = ["A", "B"]
+        nw.vs['sia'] = ["A", "B"]
         g1 = igraph.Graph( 2, [(0,1)], True )
         g1['name'] = "A"
         g1.es['mode'] = [";"]
@@ -80,7 +80,7 @@ class TestSia( unittest.TestCase ):
         """Test4 [blocking: lb B]"""
         nw = igraph.Graph( 2, [(0,1)], True )
         nw.es['sia'] = ["a"]
-        nw.vs['label'] = ["A", "B"]
+        nw.vs['sia'] = ["A", "B"]
         g1 = igraph.Graph( 2, [(0,1)], True )
         g1['name'] = "A"
         g1.es['mode'] = [";"]
@@ -104,7 +104,7 @@ class TestSia( unittest.TestCase ):
         """Test5 [blocking, dl A,B]"""
         nw = igraph.Graph( 4, [(0,1),(1,0),(2,3),(3,2)], True )
         nw.es['sia'] = ["a", "b", "c", "d"]
-        nw.vs['label'] = ["A", "B", "C", "D"]
+        nw.vs['sia'] = ["A", "B", "C", "D"]
         g1 = igraph.Graph( 2, [(0,1),(1,0)], True )
         g1['name'] = "A"
         g1.es['mode'] = ["!", "?"]
@@ -140,7 +140,7 @@ class TestSia( unittest.TestCase ):
         path = self.path + "test10_"
         nw = igraph.Graph( 3, [(0,1),(1,2),(2,0)], True )
         nw.es['sia'] = ["a", "b", "c"]
-        nw.vs['label'] = ["A", "B", "C"]
+        nw.vs['sia'] = ["A", "B", "C"]
         # nw.save( path + 'nw.' + self.format, format=self.format )
 
         g1 = igraph.Graph(3, [(0,1),(1,2)], True)
@@ -174,7 +174,7 @@ class TestSia( unittest.TestCase ):
         """Test6' [blocking: dl A,B,C]"""
         nw = igraph.Graph( 3, [(0,1),(1,2),(2,0)], True )
         nw.es['sia'] = ["a", "b", "c"]
-        nw.vs['label'] = ["A", "B", "C"]
+        nw.vs['sia'] = ["A", "B", "C"]
         g1 = igraph.Graph(3, [(0,1),(1,2)], True)
         g1['name'] = "A"
         g1.es['mode'] = ["?","!"]
@@ -205,7 +205,7 @@ class TestSia( unittest.TestCase ):
         """Test7 [blocking: dl A,B]"""
         nw = igraph.Graph( 4, [(0,1),(1,0),(2,3),(3,2)], True )
         nw.es['sia'] = ["a", "b", "c", "d"]
-        nw.vs['label'] = ["A", "B", "C", "D"]
+        nw.vs['sia'] = ["A", "B", "C", "D"]
         g1 = igraph.Graph(2, [(0,1),(1,0)], True)
         g1['name'] = "A"
         g1.es['mode'] = ["!","?"]
@@ -241,7 +241,7 @@ class TestSia( unittest.TestCase ):
         """Test8, example of p147 [blocking: lb N3]"""
         nw = igraph.Graph( 3, [(0,1),(1,2),(2,1)], True )
         nw.es['sia'] = ["a", "b", "c"]
-        nw.vs['label'] = ["N1", "N2", "N3"]
+        nw.vs['sia'] = ["N1", "N2", "N3"]
         g1 = igraph.Graph(3, [(0,1),(1,2)], True)
         g1['name'] = "N1"
         g1.es['mode'] = [";","!"]
@@ -270,7 +270,7 @@ class TestSia( unittest.TestCase ):
         """Test9, example of p147 [blocking: lb N3, dl N1,N2]"""
         nw = igraph.Graph( 3, [(0,1),(1,0),(1,2),(2,1)], True )
         nw.es['sia'] = ["a", "b", "c","d"]
-        nw.vs['label'] = ["N1", "N2", "N3"]
+        nw.vs['sia'] = ["N1", "N2", "N3"]
         g1 = igraph.Graph(3, [(0,1),(1,2)], True)
         g1['name'] = "N1"
         g1.es['mode'] = [";","!"]
@@ -301,7 +301,7 @@ class TestSia( unittest.TestCase ):
         """Test10, example of p147 [blocking: lb N3]"""
         nw = igraph.Graph( 3, [(0,1),(1,2),(2,1)], True )
         nw.es['sia'] = ["a", "b", "c"]
-        nw.vs['label'] = ["N1", "N2", "N3"]
+        nw.vs['sia'] = ["N1", "N2", "N3"]
         g1 = igraph.Graph(2, [(0,1),(1,2)], True)
         g1['name'] = "N1"
         g1.es['mode'] = [";","!"]
@@ -330,7 +330,7 @@ class TestSia( unittest.TestCase ):
         """Test11 [blocking: dl A,B]"""
         nw = igraph.Graph( 4, [(0,1),(1,0),(2,3),(3,2)], True )
         nw.es['sia'] = ["a", "b", "c", "d"]
-        nw.vs['label'] = ["A", "B", "C", "D"]
+        nw.vs['sia'] = ["A", "B", "C", "D"]
         g1 = igraph.Graph(3, [(1,2),(2,0),(0,1)], True)
         g1['name'] = "A"
         g1.es['mode'] = ["!","?",";"]
@@ -366,7 +366,7 @@ class TestSia( unittest.TestCase ):
         """Test12 [blocking: dl A,B]"""
         nw = igraph.Graph( 2, [(0,1),(1,0)], True )
         nw.es['sia'] = ["a", "b"]
-        nw.vs['label'] = ["A", "B"]
+        nw.vs['sia'] = ["A", "B"]
         g1 = igraph.Graph(3, [(1,2),(2,0),(0,1)], True)
         g1['name'] = "A"
         g1.es['mode'] = ["!","?",";"]
@@ -392,7 +392,7 @@ class TestSia( unittest.TestCase ):
         """Test13 [live]"""
         nw = igraph.Graph( 2, [], True )
         nw.es['sia'] = ""
-        nw.vs['label'] = ["A", "B"]
+        nw.vs['sia'] = ["A", "B"]
         g1 = igraph.Graph( 3, [(0,1),(1,2)], True )
         g1['name'] = "A"
         g1.es['mode'] = [";",";"]
@@ -413,7 +413,7 @@ class TestSia( unittest.TestCase ):
         """Test14 [blocking: dl C,D, lb A]"""
         nw = igraph.Graph( 4, [(0,1),(1,0),(2,3),(3,2)], True )
         nw.es['sia'] = ["a", "b", "c", "d"]
-        nw.vs['label'] = ["A", "B", "C", "D"]
+        nw.vs['sia'] = ["A", "B", "C", "D"]
         g1 = igraph.Graph(2, [(0,1),(1,0)], True)
         g1['name'] = "A"
         g1.es['mode'] = ["!","?"]

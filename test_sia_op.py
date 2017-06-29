@@ -4,8 +4,8 @@ import igraph, sia, unittest
 class TestSia( unittest.TestCase ):
     @classmethod
     def setUpClass( cls ):
-        cls.verbose = True
-        cls.plot = True
+        cls.verbose = False
+        cls.plot = False
         cls.path = "test/basic_"
         cls.format = "graphml"
 
@@ -13,7 +13,7 @@ class TestSia( unittest.TestCase ):
         """Test1 [blocking warning: lb CP1, CP2]"""
         nw = igraph.Graph( 5, [(0,1),(1,2),(1,3),(2,4),(3,4)], True )
         nw.es['sia'] = ["a", "a1", "a2", "b1", "b2"]
-        nw.vs['label'] = ["A", "CP1", "A1", "A2", "CP2"]
+        nw.vs['sia'] = ["A", "CP1", "A1", "A2", "CP2"]
         g0 = igraph.Graph( 2, [(0,1)], True )
         g0['name'] = "A"
         g0.es['mode'] = ["!"]
@@ -54,7 +54,7 @@ class TestSia( unittest.TestCase ):
         """Test2 [live]"""
         nw = igraph.Graph( 2, [], True )
         nw.es['sia'] = []
-        nw.vs['label'] = ["CP1", "CP2"]
+        nw.vs['sia'] = ["CP1", "CP2"]
         g1 = igraph.Graph( 4, [(0,1),(1,2),(2,0),(1,3),(3,0)], True )
         g1['name'] = "CP1"
         g1.es['mode'] = ["?","!","!","!","!"]
@@ -75,7 +75,7 @@ class TestSia( unittest.TestCase ):
         """Test1 [live]"""
         nw = igraph.Graph( 6, [(0,1),(0,2),(1,3),(2,3),(4,0),(3,5)], True )
         nw.es['sia'] = ["a1", "a2", "b1", "b2", "a", "b"]
-        nw.vs['label'] = ["CP1", "A1", "A2", "CP2", "A", "B"]
+        nw.vs['sia'] = ["CP1", "A1", "A2", "CP2", "A", "B"]
         g0 = igraph.Graph( 2, [(0,1)], True )
         g0['name'] = "A"
         g0.es['mode'] = ["!"]
@@ -116,7 +116,7 @@ class TestSia( unittest.TestCase ):
         """Decoupled [live]"""
         nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(3,0)], True )
         nw.es['sia'] = ["a", "a'", "b", "b'"]
-        nw.vs['label'] = ["A", "b1", "B", "b2"]
+        nw.vs['sia'] = ["A", "b1", "B", "b2"]
         g0 = igraph.Graph( 2, [(0,1),(1,0)], True )
         g0['name'] = "A"
         g0.es['mode'] = ["?","!"]
@@ -147,7 +147,7 @@ class TestSia( unittest.TestCase ):
         """Not decouplde [blocking]"""
         nw = igraph.Graph( 4, [(0,1),(1,2),(2,3),(3,0)], True )
         nw.es['sia'] = ["a", "a'", "b", "b'"]
-        nw.vs['label'] = ["A", "b1", "B", "b2"]
+        nw.vs['sia'] = ["A", "b1", "B", "b2"]
         g0 = igraph.Graph( 2, [(0,1),(1,0)], True )
         g0['name'] = "A"
         g0.es['mode'] = ["?","!"]

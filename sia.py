@@ -4,15 +4,21 @@ import igraph, time
 
 class Sia( object ):
     def __init__( self, g ):
-        self.name = g["name"]
+        self.pname = g["name"]
+        if( "sia" not in g.attributes() ):
+            self.name = self.pname
+        else:
+            self.name = g["sia"]
         self.g = g.copy()
         self._init_attr()
         self.g.vs[0]['init'] = True
         self._mark_end()
+        if( "pname" not in self.g.es.attributes() ):
+            self.g.es['pname'] = self.g.es['name']
         for v in self.g.vs():
-            v['subsys'] = { g['name']: v.index }
+            v['subsys'] = { self.name: v.index }
         sys = []
-        sys.append( g['name'] )
+        sys.append( self.name )
         for e in self.g.es:
             e['sys'] = list( sys )
         # plot(g)
@@ -62,7 +68,7 @@ class Sia( object ):
 
         g.vs['label'] = range( g.vcount() )
         if g.ecount() > 0:
-            g.es['label'] = [ n + m for n, m in zip( g.es['name'],
+            g.es['label'] = [ n + m for n, m in zip( g.es['pname'],
                 g.es['mode'] ) ]
 
     def _plot_postprocess( self ):
@@ -106,7 +112,7 @@ class SiaFold( Sia ):
         self._fold( sia1.g, sia2.g, shared )
         self.delete_unreachable()
         self._mark_end()
-        self.set_name( sia1.name + sia2.name )
+        self.set_name( sia1.name + sia2.name, sia1.pname + sia2.pname )
         # print self.print_stats()
 
     def _fold( self, g1, g2, shared ):
@@ -118,6 +124,7 @@ class SiaFold( Sia ):
 
         es = []
         attr_name = []
+        attr_pname = []
         attr_mode = []
         attr_sys = []
 
@@ -129,6 +136,7 @@ class SiaFold( Sia ):
                     dst = self._get_vertex_id( e1.target, e2.target )
                     es.append( (src, dst) )
                     attr_name.append( name )
+                    attr_pname.append( e1['pname'] )
                     attr_mode.append( ';' )
                     attr_sys.append( e1['sys'] + e2['sys'] )
 
@@ -141,6 +149,7 @@ class SiaFold( Sia ):
                 dst = self._get_vertex_id( act.target, idx )
                 es.append( (src, dst) )
                 attr_name.append( act['name'] )
+                attr_pname.append( act['pname'] )
                 attr_mode.append( act['mode'] )
                 attr_sys.append( act['sys'] )
         e_start = self.g.ecount()
@@ -154,11 +163,13 @@ class SiaFold( Sia ):
                 dst = self._get_vertex_id( idx, act.target )
                 es.append( (src, dst) )
                 attr_name.append( act['name'] )
+                attr_pname.append( act['pname'] )
                 attr_mode.append( act['mode'] )
                 attr_sys.append( act['sys'] )
 
         self.g.add_edges( es )
         self.g.es[e_start:]['name'] = attr_name
+        self.g.es[e_start:]['pname'] = attr_pname
         self.g.es[e_start:]['mode'] = attr_mode
         self.g.es[e_start:]['sys'] = attr_sys
 
@@ -180,9 +191,13 @@ class SiaFold( Sia ):
                 idx = self._get_vertex_id( v1.index, v2.index )
                 g.vs[idx]['subsys'] = dict( v1['subsys'], **v2['subsys'] )
 
-    def set_name( self, name ):
+    def set_name( self, name, pname=None ):
+        if pname is None:
+            pname = name
         self.name = name
-        self.g['name'] = name
+        self.pname = pname
+        self.g['sia'] = name
+        self.g['name'] = pname
 
 
 class Pnsc( object ):
@@ -204,8 +219,8 @@ class Pnsc( object ):
 
     def _abstract_nw( self, nw, sia1, sia2, shared, name ):
         membership = list( range( nw.vcount() - 1 ) )
-        idx1 = nw.vs.find( label=sia1.name ).index
-        idx2 = nw.vs.find( label=sia2.name ).index
+        idx1 = nw.vs.find( sia=sia1.name ).index
+        idx2 = nw.vs.find( sia=sia2.name ).index
         if idx1 > idx2:
             membership.insert( idx1, idx2 )
             new_id = idx2
@@ -218,7 +233,7 @@ class Pnsc( object ):
                 combine_edges=False )
         if g.ecount() > 0:
             g.delete_edges( g.es( sia_in=shared ) )
-        g.vs[new_id]['label'] = name
+        g.vs[new_id]['sia'] = name
         return g
 
     def _analyse_blocking( self ):
@@ -280,8 +295,8 @@ class Pnsc( object ):
         nw = self.nw
         dependency = []
         for e in nw.es( sia_in=actions ):
-            dst = nw.vs[e.target]['label']
-            src = nw.vs[e.source]['label']
+            dst = nw.vs[e.target]['sia']
+            src = nw.vs[e.source]['sia']
             if dst == name and src not in dependency:
                 dependency.append( src )
             elif src == name and dst not in dependency:
@@ -290,7 +305,7 @@ class Pnsc( object ):
 
     def _get_shared( self, nw, name1, name2 ):
         shared = []
-        g_sub = nw.vs( label_in=[name1, name2] ).subgraph()
+        g_sub = nw.vs( sia_in=[name1, name2] ).subgraph()
         for e in g_sub.es:
             shared.append( e['sia'] )
         return shared
@@ -508,7 +523,7 @@ class PnscBuffer( Pnsc ):
         g_buf.es['mode'] = es_mode
 
         sia = SiaFold( Sia( g_sia ), Sia( g_buf ), shared )
-        sia.set_name( g_sia['name'] )
+        sia.set_name( g_sia['sia'], g_sia['name'] )
         return sia
 
 
