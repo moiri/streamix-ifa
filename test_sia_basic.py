@@ -445,6 +445,50 @@ class TestSia( unittest.TestCase ):
         self.assertSetEqual( set( ['C', 'D'] ), set( dls[0] ) )
         self.assertListEqual( ['A'], pnsc.get_lonelyblocker() )
 
+    def test15( self ):
+        """Test15 [blocking: dl C,D, lb A]"""
+        nw = igraph.Graph( 4, [(0,1),(1,0),(2,3),(3,2)], True )
+        nw.es['sia'] = ["0_1", "0_2", "2_4", "3_5"]
+        nw.vs['sia'] = ["_0", "_1", "_2", "_3"]
+        g1 = igraph.Graph(2, [(0,1),(1,0)], True)
+        g1['name'] = "A"
+        g1['sia'] = "_0"
+        g1.es['mode'] = ["!","?"]
+        g1.es['pname'] = ["a","b"]
+        g1.es['name'] = ["0_1","0_2"]
+        g1.es['weight'] = 1
+        g2 = igraph.Graph(1, [(0,0)], True)
+        g2['name'] = "B"
+        g2['sia'] = "_1"
+        g2.es['mode'] = [";"]
+        g2.es['pname'] = ["tb"]
+        g2.es['name'] = ["1_3"]
+        g2.es['weight'] = 1
+        g3 = igraph.Graph(2, [(0,1),(1,0)], True)
+        g3['name'] = "C"
+        g3['sia'] = "_2"
+        g3.es['mode'] = ["!","?"]
+        g3.es['pname'] = ["c","d"]
+        g3.es['name'] = ["2_4","3_5"]
+        g3.es['weight'] = 1
+        g4 = igraph.Graph(2, [(0,1),(1,0)], True)
+        g4['name'] = "D"
+        g4['sia'] = "_3"
+        g4.es['mode'] = ["!","?"]
+        g4.es['pname'] = ["d","c"]
+        g4.es['name'] = ["3_5","2_4"]
+        g4.es['weight'] = 1
+
+        pnsc = sia.Pnsc( nw, [g1, g2, g3, g4])
+        pnsc.fold( self.plot )
+        if self.verbose: pnsc.print_error()
+        self.assertTrue( pnsc.is_blocking() )
+        self.assertSetEqual( set( ['_0', '_2', '_3'] ),
+                set( pnsc.get_blocker() ) )
+        dls = pnsc.get_deadlocker()
+        self.assertSetEqual( set( ['_2', '_3'] ), set( dls[0] ) )
+        self.assertListEqual( ['_0'], pnsc.get_lonelyblocker() )
+
 if __name__ == '__main__':
     unittest.main()
 

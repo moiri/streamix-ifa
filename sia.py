@@ -43,9 +43,11 @@ class Sia( object ):
 
     def get_actions( self, v ):
         names = []
+        pnames = []
         for e in self.g.es( self.g.incident( v ) ):
             names.append( e['name'] )
-        return names
+            pnames.append( e['pname'] )
+        return ( names, pnames )
 
     def get_v_init( self ):
         return self.g.vs.find( init=True ).index
@@ -338,9 +340,9 @@ class Pnsc( object ):
         for blocker in blockers:
             actions = []
             vs.append( blocker )
-            for state in blockers[blocker]:
-                actions += blockers[blocker][state]['actions']
-            deps = self._get_dependency( blocker, actions )
+            for state in blockers[blocker][1]:
+                actions += blockers[blocker][1][state]['actions']
+            deps = self._get_dependency( blocker, actions[0] )
             for dep in deps:
                 if dep not in vs:
                     vs.append( dep )
@@ -368,23 +370,24 @@ class Pnsc( object ):
                 state = v['subsys'][sys.name]
                 if not ( v['action'][sys.name] or sys.g.vs[state]['end'] ):
                     v['blocking'] = True
-                    self._update_blocker_info( v.index, sys.name, state,
-                            sys.get_actions( state ) )
+                    self._update_blocker_info( v.index, sys, state )
 
-    def _update_blocker_info( self, state_pnsc, name, state, actions ):
+    def _update_blocker_info( self, state_pnsc, sys, state ):
+        name = sys.name
+        actions = sys.get_actions( state )
         if len( actions ) == 0: return
         if name not in self.blocker_info:
-            self.blocker_info[name] = { state:
-                    { 'actions': actions, 'states': [state_pnsc] } }
+            self.blocker_info[name] = ( sys.pname, { state:
+                    { 'actions': actions, 'states': [state_pnsc] } } )
         elif state not in self.blocker_info[name]:
-            self.blocker_info[name][state] = { 'actions': actions,
+            self.blocker_info[name][1][state] = { 'actions': actions,
                     'states': [state_pnsc] }
         else:
-            if state_pnsc not in self.blocker_info[name][state]['states']:
-                self.blocker_info[name][state]['states'].append( state_pnsc )
+            if state_pnsc not in self.blocker_info[name][1][state]['states']:
+                self.blocker_info[name][1][state]['states'].append( state_pnsc )
             for action in actions:
-                if action not in self.blocker_info[name][state]['actions']:
-                    self.blocker_info[name][state]['actions'].append( action )
+                if action not in self.blocker_info[name][1][state]['actions']:
+                    self.blocker_info[name][1][state]['actions'].append( action )
 
     def get_blocker( self ):
         """get a list of blocking system names"""
@@ -475,12 +478,12 @@ class Pnsc( object ):
             self.print_error_source( lb )
 
     def print_error_source( self, sys ):
-        print " - '" + sys + "' in states"
-        for state in self.blocker_info[sys]:
+        print " - '" + self.blocker_info[sys][0] + "' in states"
+        for state in self.blocker_info[sys][1]:
             print "   - " + str( state ) + "(" \
-                    + str( self.blocker_info[sys][state]['states']) \
+                    + str( self.blocker_info[sys][1][state]['states'] ) \
                     + ") on actions " \
-                    + str( self.blocker_info[sys][state]['actions'])
+                    + str( self.blocker_info[sys][1][state]['actions'][1] )
 
 
 class PnscBuffer( Pnsc ):
