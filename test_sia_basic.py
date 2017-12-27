@@ -55,6 +55,27 @@ class TestSia( unittest.TestCase ):
         self.assertSetEqual( set( ['A', 'B'] ), set( dls[0] ) )
         self.assertListEqual( [], pnsc.get_lonelyblocker() )
 
+    def test02p( self ):
+        """Test2p [live]"""
+        nw = igraph.Graph( 2, [(0,1),(0,1)], True )
+        nw.es['sia'] = ["a", "b"]
+        nw.vs['sia'] = ["A", "B"]
+        g1 = igraph.Graph(5, [(0,1),(0,2),(1,3),(2,4)], True)
+        g1['name'] = "A"
+        g1.es['mode'] = ["!","?","!","!"]
+        g1.es['name'] = ["d1","d2","a","b"]
+        g1.es['weight'] = 1
+        g2 = igraph.Graph( 2, [(0,1)], True )
+        g2['name'] = "B"
+        g2.es['mode'] = ["?"]
+        g2.es['name'] = ["a"]
+        g2.es['weight'] = 1
+
+        pnsc = sia.Pnsc( nw, [g1, g2])
+        pnsc.fold( self.plot )
+        if self.verbose: pnsc.print_error()
+        self.assertFalse( pnsc.is_blocking() )
+
     def test03( self ):
         """Test3 [live]"""
         nw = igraph.Graph( 2, [], True )
