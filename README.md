@@ -3,19 +3,19 @@ Compatibility check of synchronous interface automata
 
 Requires `python-igraph` package: `pip install python-igraph`
 
+In order to install `pip` run
+
+    sudo apt update
+    sudo apt install python-pip
+
 ## Install
 
 Run the following commands
 
-    mkdir build
-    mkdir build/sia
-    cp setup.py build/.
-    cp sia.py build/sia/__init__.py
-    cd build
-    sudo pip install .
-    cd ..
-    rm -r build
-    sudo cp check_sia.py /usr/local/bin/.
+    make
+    sudo make install
+
+This will install the package with `pip` and copy `check_sia.py` to `/usr/local/bin/smxsia`.
 
 ## Run Testcases with Unittest
 
